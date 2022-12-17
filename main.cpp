@@ -6107,7 +6107,7 @@ void TryToExit(HWND hWnd)
             apetemp[i].peGreen = z*0.9;
             apetemp[i].peBlue =  z*0.8;
         }
-        for (i=0; i<16; i++)
+        for (int i=0; i<16; i++)
         {
             float z = 16*(i+16);
             float t = (i/16.0f);
