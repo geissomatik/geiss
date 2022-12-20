@@ -1,0 +1,365 @@
+
+What's New in Geiss v4.29 (6/20/2009)
+----------
+1. Default video mode selection now matches whatever your primary monitor is set to.
+2. On config panel, the video mode list is now sorted.
+3. On advanced config panel, changed 'frames between mode switches' to 
+    'seconds between mode switches', and made the new range from 1..60 
+    seconds.  Also fixed the saving of this value (in 4.28, there was a 
+    bug, and it wouldn't save the value if you changed it).
+
+
+What's New in Geiss v4.28 (10/4/2008)
+----------
+1. In VS2003 project settings, switched from multi-threaded DLL 
+    to multi-threaded (oops)... was causing an unnecessary MSVCR71.DLL 
+    dependency, which some systems do not have.
+
+
+What's New in Geiss v4.27 (9/12/2008)
+-------------------------------------
+1. added support for multiple monitors!
+    -select which monitor from the config panel
+    -geiss will run on that monitor, and you can work freely in the other(s)
+2. added instructions to the config panel on how to run with live input, 
+    as well as a button to run 'sndvol32 /r' for you.
+3. default video mode is now 32-bit (was 8-bit), and the 32-bit modes now 
+    say "[recommended]" next to them, instead of the 8-bit ones.
+4. we now clear the edges on one of the main buffers [front or back - it 
+    will alternate] every 11 frames, so if you're working on another 
+    monitor and something accidentally paints over part of the visualizer 
+    window, it'll be gone within a second or less.
+5. fixed bug where waveform #1, with really loud music, could sometimes 
+    draw pixels just beyond the bottom line of the screen, which would 
+    cause them to bleed into the image [at least, in modes such as mode 6].
+6. duration (and frequency, if randomization is on) of song title popups 
+    is now sync'd to the framerate.
+7. fixed bug where pausing the music would sometimes cause song title popup 
+    to appear with " - Winamp [Paused]" at the end of the song title.
+8. tuned some spatial and temporal settings on the Grid effect so that it 
+    looks nicer at fast framerates and/or higher resolutions.  (Looks the 
+    same at old/slow/low framerates/resolutions.)
+9. when you start Geiss, or when you start the config panel, or (when 
+    on the config panel) select a new monitor while it is up, it now auto-
+    finds the closest match to the previously-selected resolution and color 
+    depth, if the exact match can not be found.  (Rather than just giving you
+    an error and quitting, in the case of running the plugin; or selecting 
+    some lazy default, for the config panel.)
+10. removed the 'minimize winamp' option from plugin (not necessary)
+
+
+What's New in Geiss v4.26 (8/23/2008)
+-------------------------------------
+1. added 'S'huffle and 'R'epeat toggle keys to plugin version.
+2. *plugin* no longer flashes the help message at you when you move the mouse.
+3. made waveform colors richer in >8bpp modes
+4. 'shifting' effect now runs correctly at >30 fps.  (it got a bit spastic before.)
+5. default 'frames_til_auto_switch' is a little longer now.
+6. fixed a bug in 8-bit modes where last ~256 pixels on last scanline weren't updating.
+7. when you set it to use 100% of the screen, it now uses a bit more (before it was actually like 96%;
+     now it's about 98%.  My sincere apologies, but I just don't have time to revamp it all to use 100%...
+     trying to do what I can in limited time...)
+8. we no longer call DrawText() on the front buffer.  (Embarrassing... I know... I was
+     *very* new to programming and graphics back in '98!)  This was causing problems on
+     some machines whenever you tried to draw text.
+9. increased the chromatic dispersion on the 'bar' effect ('u' key), and slowed it down a bit,
+     for 32-bit modes.
+10. worked on the chasers a bit - slowed them down in high-fps situations, and they new draw more dots
+     when the res. is high (proportional to the resolution), so the overall feel is the same.
+11. default mode preferences (ratings) now biased so that modes 5-9 show up more often (4 stars)
+     than the others.  Mode 15 shows up less often (2 stars).  (Defaults only)
+12. in mode 6, you now get swirlies more often.
+13. worked around a compiler bug that was sometimes putting a flashing white dot in the upper-left corner.
+     (had to move from VC++6 to VS2003 .NET; had to make sure processor was set to 'Blend' and Global Optimizations
+     were off.)
+14. disabled all message processing that might interfere with power functions (monitor turning off,
+     sleep, etc).
+15. some of the more colorful effects now show up a little more often, in hi-color modes; and the grid
+     effect now shows up ~1% more often, in all modes.
+16. mouse cursor is now hidden on every frame (...before, if you hit a winamp play/pause/etc key, 
+     the cursor would show, and you'd have to wiggle the mouse to make it go away).
+17. fixed aspect ratio of 'grid' effect
+18. changed text color to a more pleasant yellow
+19. moved the 'A' dots a little further away from the center of the screen when at larger resolutions.
+20. [plugin only] if you try to run the plugin without music, it now gives you 
+     a messagebox telling you why it's not going to work (instead of just leaving you 
+     with a black screen, wondering why nothing is happening).
+
+
+What's New in Geiss v4.25 (8/10/2008)
+-------------------------------------
+1. there are no longer any restrictions on screen resolution.  (Before, we had to
+	write a separate loop for each possible res, because we were out of registers
+	and couldn't hold that info in a register.  Now, the code just modifies itself
+	to poke in the right variable into an immediate value in the code itself.)
+2. the default resolution is now whatever your desktop is at.
+3. when the framerate exceeds 30 fps, we now slow down the motion (per frame)
+	so that it appears to be the same rate of motion as if you were running at 30
+	fps - just smoother.
+4. the overall image darkening-over-time rate (the sum of the 4 weights for bilinear 
+	interpolation) is now tuned based on the # of pixels.  At high resolutions,
+	there is very little loss (weightsum == 256), while at 800x600, the weights
+	total about 253, and at low resolutions (320x240), it goes down as low as 251.
+5. 'frames_til_auto_switch' is now actually adjusted to the current framerate, so,
+	set its value as if the plugin/screensaver were going to be running at 30 fps,
+	and it will do the right thing.  (This way, you don't have to mess with that
+	value to correct for whatever fps you're getting.)
+6. updated the waveforms to draw properly at higher resolutions, by smoothly upsampling
+	(to 2X or 4X the # of dots).  This also keeps them nice and mostly-solid.
+7. made a bunch of hte other little special effects work nicely at higher resolutions
+	(that usually means fatter dots), for both 8-bit and >8-bit color.
+8. wow - fixed a bug in the screensaver version that proves I hardly knew what a 
+	thread *was* back in 1998.  Oops.  Keypresses are actually SAFE now!
+9. also cranked up default wave brightness/scaling for the screensaver.
+
+
+What's New in Geiss v4.24 (1/4/2000)
+------------------------------------
+1. updated web link (geisswerks.com) and e-mail address.
+2. changed registry key from being housed in HKEY_LOCAL_MACHINE
+     to HKEY_CURRENT_USER.  
+3. bug: maps 21+ weren't selectable; you can now access them directly
+     using the following commands.  The symbol '#' stands for a key
+     from 0 to 9 at the TOP of your keyboard - not from the numeric
+     keypad.  Here are the command strings:
+    
+    -press '##' to select a mode directly (ex: mode 5 is entered as '05').
+    -press 'm##' to select a custom message 
+    -press '[##' to load a preset
+    -press ']##' to save a preset
+    -you can press ESC at any time to cancel an in-progress command.
+    -pressing ESC again will exit.
+
+
+What's New in Geiss v4.23 (12/27/99)
+------------------------------------
+1. FPS (frames-per-second) display was broken - fixed now.
+
+
+What's New in Geiss v4.21 (12/25/99)
+------------------------------------
+1. updated the range of frequences that contribute to the
+    red, green and blue colors in truecolor mode.  Received
+    (valid) complaints about too much red... there should be
+    a good balance now.
+
+
+What's New in Geiss v4.20 (12/8/99)
+-----------------------------------
+1. in truecolor modes, the color of the wave is now synchronized
+     to match the frequencies in the music.  Bass will show up as
+	 red, mids as green, and treble as blue.
+2. truecolor modes are now about 10% faster - special thanks to Allen Hansen
+     for all his help!
+3. added 9 new maps (#17-25)
+4. added some new palettes 
+5. improved beat detection (for 'shifting' effect)
+
+
+What's New in Geiss v4.01 (6/3/99)
+----------------------------------
+1. fixed bug w/config panel's "use shifting effect" slider
+2. fixed bug w/saver where it sometimes failed to autostart
+      (WM_SYSKEYUP came in errantly on frame 0... now ignored)
+3. plugin & saver now use GEISS.INI in your WINDOWS directory.
+      (plugin previously used your winamp/plugins directory, which
+	   was sometimes impossible to detect)
+4. removed old usage of 't' key from help screen (no longer shows song title)
+5. set default gamma correction to 10%.
+6. screensaver no longer exits on mouse movement
+7. some effects can now be controlled by moving the mouse 
+
+
+What's New in Geiss v4.00 final (5/23/99)
+-------------------------------
+1. adjusted the spectrum analyzer to more uniformly show bass/treble (plugin only)
+2. fps display is finally fixed
+3. ADDED RATING SYSTEM FOR SCREENS.  See geiss.txt for usage (uses keys '<' and '>').
+4. toned down the 'shifting' amount in the shifting effect.
+5. removed call to getDXVersion(), because NT4/SP4 users were still getting the
+      'ordinal 6 not found' message at times.  Hopefully, 99% of users will have
+	  at least DirectX 3 or later, which should be all that is required now.
+6. made the new 'beat detection' for wave brightness toggleable from the main
+      config panel, since some people liked it more, and others preferred the old
+	  mode.
+7. config panel items now 'tab' in order.
+8. fixed bug w/presets for mode 14 (on load, it always had a really huge rotation).
+9. fixed bug w/presets where palette would load wrong 20% of the time
+
+
+Other really great new features that were introduced in 4.0 beta:
+-----------------------------------------------------------------
+1. presets (see geiss.txt)
+2. dynamic map shifting - maps can now 'scoot' to the beat (toggle with 'I' key)
+3. screensaver supports passwords
+4. 5 new maps
+5. palette now lockable ('T' key).
+6. can now suppress all text messages (see config panel) (for nightclub use)
+7. ADDED CUSTOMIZEABLE MESSAGES (for nightclub or personal use - see geiss.txt)
+8. added level trigger to screensaver (plugin already had it)
+9. map now changes on strong beat (or times out if song is mellow)
+
+
+
+What's New in Geiss v4.00 beta 2 (4/10/99)
+--------------------------------
+
+[plugin only... screensaver is not yet released]
+
+NOTE: you will need Winamp 2.10 to get access to the new keys used in
+      version 4.00 of the Geiss plugin.
+
+1. added passwords to screensaver
+2. added level trigger to screensaver
+3. fixed bug in level trigger for plugin
+4. added 5 new maps - access them directly via SHIFT-2 through SHIFT-6 keys
+5. added presets - use '[##' to load and ']##' to save, where '##' is the
+           two-digit preset number to load/save.  Can be from 00 to 99.
+6. added a new waveform (oscilloscope X-Y mode)
+7. added true Beat Detection... now, when a "beat" is detected in the music, 
+     the wave brightness is more sharply linked to the beat volume, so the beats
+     really come out.  When no beat is detected, you see flat color, to emphasize
+     the waveform.
+8. map now changes on beat (when beat detected)
+9. further thinned out the DirectX code (QueryInterface).. could have fixed 
+     NT DirectX problems.  ?
+10. NOTE: plugin now requires Winamp 2.10 for extended map keys (SHIFT-1 through 
+     SHIFT-0) to function.
+11. added dymanic map modification (linked to beats), and checkbox for default
+     setting of this feature, in config panel.  This can look REALLY cool.
+12. added info about FULLSCREEN/EXCLUSIVE failure for plugin: "don't use
+    DirectSound output from Winamp!  Use waveout!"
+13. added palette locking ('T' key)
+14. added option to suppress ALL text messages (for nightclub-type displays)
+15. added customizable messages... place them in GEISS.INI like so: (range 0-99)
+		[CUSTOM MESSAGES]
+		MESSAGE 1=Hello Dad - I'm in Jail!
+		MESSAGE 99= ---  Welcome to Club Vinyl  ---
+    Edit GEISS.INI in your Windows directory (for the screensaver) or your
+    PLUGINS directory (for Winamp).
+    To show a custom message, hit 'M##' where '##' is the 2-digit number of the
+     message.  (example: to show number 3, type 'M03')
+16. hopefully fixed a bug where certain (bright) greyscale palettes would cause
+      the song title popups to become a solid white block when they faded out.
+17. made an 'advanced options' panel to thin out the config panel... added a few 
+      sliders too.
+18. added dynamic map shifting - VERY, VERY COOL.  Use the 'I' key to
+      turn it on and off.  It only takes effect when a good beat is
+      detected.  You can set thresholds for how sensitive it is from
+      the config panel.
+
+
+What's New in Geiss v3.61 (3/18/99)
+-------------------------
+1. fixed bug with CPU detection on older Cyrix processors (5x86's,
+     I believe).  This bug was giving an error message that said
+     'Geiss executed an illegal instruction.'
+2. updated the disclaimer/license agreement/documentation to
+     officially say that Geiss is 100% free.
+
+
+What's New in Geiss v3.60 (3/4/99)
+-------------------------
+1. added Cyrix CPU detection and optimizations for Cyrix CPU's -
+     should see a 20% core frame rate boost on these processors
+     in 8-bit video modes.
+<the rest of these are mostly minor bug fixes>
+2. If the Windows CD player was running and you tried to
+     invoke the screensaver w/the autostart CD option, it would
+     freeze on frame 25 when it checked the status of the CD-ROM.
+     Now it detects if another CD player program is open, and if so,
+     it disables CD controls and warns you to close the other CD
+     player. (screensaver only)
+3. re-fixed bug w/hourglass in screensaver (oops!)
+4. added color variance to song titles for hicolor modes.
+5. Geiss should be better about not 'resizing' desktop icons
+     or windows upon exit, but it's still not perfect
+6. power management bug finally fixed... when Geiss is running and
+     the system issues a request to shut off the monitor or go into
+     standby mode, Geiss shuts off peacefully.
+7. since only DirectX 3 is required since the last version, it now
+     only checks as far as DirectX 3.  (no anticipated effect)
+8. some folks were having trouble with the program just shutting off
+     after awhile - this was because Windows would think a screensaver
+     wasn't running and would try to invoke one (Geiss or another one).
+     Geiss will now intercept that request and kill it.
+9. map 3: fixed bug with fatal overflow in hi-res, hi-color maps
+     (Geiss would exit whenever it randomly selected map #3)
+10. fixed DDSCL_FULLSCREEN and DDSCL_EXCLUSIVE errors.
+11. fixed bug w/400x300x8 display where every 5th group of 8 pixels
+      mimicked the 8 pixels left of it - was using MMX regs 0, 1, 2,
+      3, and 3. (oops)
+12. sped up generation of map 6 substantially.
+13. when help msg is on, FPS message is only 1 line now (no overwriting)
+14. fixed bug w/24-bit color modes and songtitle popups (plugin only)
+15. now if it finds DirectX version 0 it just prints a warning to the debug
+     file and doesn't bother the user.  This seems to be a detection error,
+     and DirectX is usually ok to run.
+16. modified About box - removed picture, changed content.
+
+
+What's New in Geiss v3.53 (2/17/99)
+-------------------------
+1. fixed a bug where the mouse cursor was sometimes visible while 
+     the program was running.
+2. increased the core speed by about 15%, with generous help from 
+     the guys at Cyrix.  Cyrix users should anticipate Geiss v3.60, 
+     coming soon, which will have complete optimization for Cyrix 
+     processors.
+3. removed the Dither modes
+4. fixed the 24-bit display modes.
+5. fixed bug in config panel w/saving the user's selection of sound 
+     device.
+6. added detail to debug file
+7. limited video modes to max. of 1024x768, so people don't kill 
+     their systems.  It can go higher, but for now, I'm capping it 
+     there.
+8. changed a few of the maps to be more high-speed
+9. made maps more versatile so that more interesting ones can be 
+     written in the future.
+10. for plugin, fixed bug where the song # wasn't stripped off if
+     the song # was 1000 or higher.
+11. fixed bug w/staggered display of 400x300x8 video mode
+12. removed the Mode X compatibility... was giving some people errors
+     where SetCooperativeLevel failed (for DDSCL_EXCLUSIVE and
+     DDSCL_FULLSCREEN).
+
+
+What's New in Geiss v3.50 (2/6/99)
+-------------------------
+1. sped up 16-bit MMX and non-MMX blits
+2. added spectrum analyzer effects to plugin
+3. improved error message for DSERR_BADFORMAT error (a common one)
+4. increased plugin max. res. from 640x480 to 800x600
+5. debug file now enumerates all video modes when they run the config 
+     panel
+6. added Mode X support
+7. fixed bug w/Winamp (when always on top) sitting on top of the 
+     config panel
+8. changed icon
+9. now only requires DirectX 3 (as opposed to DirectX 5)... should 
+     work on NT4 with Service Pack 3 now.
+10. the plugin now (by default) minimizes Winamp when it runs, then
+     restores Winamp when finished, so that the overhead of drawing
+     Winamp's window is eliminated.  Also, this alleviates problems
+     with Winamp drawing on top of the directdraw surface.
+11. fixed bug w/Winamp window getting moved after Geiss was run.
+12. removed registration info from about box; now all under the 
+     "Legal" button.
+13. fixed power management bug for screensaver... before it would
+     freeze up if your power management tried to shut Geiss off...
+     now it should work fine.
+14. added detailed FPS info
+15. added 24-bit modes.... but they were messed up.
+16. added "autostart CD" option for screensaver
+17. added slider-bar to plugin so you can set how often random song
+     titles should pop up.
+18. cleaned up exit code a lot (should make it more stable)
+19. now only accepts certain discrete video modes that I've hardwired -
+     before, it would let you pick some crazy video mode if your card
+     supported it, but wouldn't run correctly in that mode.  They
+     are now limited to the ones that are directly supported.
+
+
+
+

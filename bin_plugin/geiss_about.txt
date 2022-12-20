@@ -1,0 +1,311 @@
+GEISS is copyright (c) 1998-2009 by Ryan M. Geiss, as
+well as all images generated with it.  All rights are reserved.
+
+
+WHAT IS GEISS?
+--------------
+
+   GEISS is sound-reactive eye candy for your computer.  It comes in
+   two forms: one version is a screensaver for Windows 95/98/ME/2000/XP/Vista
+   and the other, a visualization plugin for Winamp.  Geiss uses hand-
+   tuned x86 assembly language to reach blazing speeds, generating
+   smooth and graceful realtime graphics... and it can hear whatever
+   your computer hears and synchronize the graphics it generates to
+   the sound you're hearing.  You can hook a microphone, stereo, TV,
+   or anything into your sound card... you can also play an audio
+   CD in your CD-ROM drive if you have the CD audio cable connecting
+   it to your sound card.  Whatever the sound source, Geiss will
+   create  a fluid, visual image that matches the sounds you're
+   hearing.
+
+   You've downloaded the Winamp plug-in version of Geiss.  If you
+   don't know what "Winamp" or an "mp3" is, you've downloaded
+   the wrong thing... go get the screensaver instead!
+
+
+
+SYSTEM REQUIREMENTS
+-------------------
+1. Microsoft DirectX 3.0 or later.
+2. Microsoft Windows 95/98/ME/2000/XP/Vista.  
+    (Should also work on NT4 with Service Pack 4.)
+3. Pentium-200 or faster processor.  MMX is highly utilized if present.
+4. Winamp (version 2.10 or later).
+
+
+
+
+
+INSTALLING GEISS
+----------------
+1. Run the installer.
+2. Start up Winamp.
+3. If you told the installer NOT to set 'Geiss' as your default plugin,
+    hit CTRL+K, select 'Geiss for Winamp' as your current visualization plugin,
+    and hit 'Close'.
+4. Start some music playing in Winamp.
+5. Hit CTRL+SHIFT+K, or double-click on the little dancing bars that are part
+    of the winamp window, to launch Geiss.
+6. You can also configure Geiss by hitting ALT+K from Winamp.
+
+
+
+***********************************
+EXPLANATION OF NEW FEATURES IN 4.00
+***********************************
+
+1. PRESETS: these will allow you to save your favorite screens for later
+   recall.  Items that are saved include the map #, its random parameters,
+   the palette, the waveform, any extra effects that were running, and the
+   wave scaling (j/k keys).  
+
+   saving: once you get a screen to look how you want it, you need to
+   press 3 keys - the right bracket ']', then the 2-digit number of the
+   slot you want to save it in, from 00 to 99.  Use the keys above the 
+   letters on your keyboard for this - NOT the numeric keypad.
+
+   loading: hit the left bracket '[' key, then enter the 2-digit code.
+
+   note that these presets are saved in the GEISS.INI file (which is
+   in your Windows directory), so you can share them
+   with other people if you want to.  The GEISS.INI file will be created
+   automatically the first time you save a preset.  (If you're having
+   trouble finding it, try 'enabling debug info' from the config panel,
+   then running Geiss once.  Look at C:\G_DEBUG.TXT.  In the first few
+   lines it will give you the full path & filename to your INI file).
+
+   WARNING: don't mess with the numerical parameters in the file, it's 
+   likely to crash your system, and it's your own responsibility.
+
+
+2. CUSTOM MESSAGES: you can now chuck your favorite sayings up on the 
+   screen and watch them fade away.
+
+   To show a custom message while Geiss is running, hit 'M', then enter
+   the two-digit code of the message.  For example: to show number 3, 
+   type 'M03'.
+
+   However, you first have to program your messages.  You can place
+   them in GEISS.INI in the [CUSTOM MESSAGES] section.  GEISS.INI
+   can be found in your Windows directory.  If it
+   doesn't exist, go ahead and create it.  If the [CUSTOM MESSAGES]
+   section does not exist, go ahead and create it too.  It needs to
+   look something like this:
+
+        [CUSTOM MESSAGES]
+        MESSAGE 0=This is Geiss 4.0
+        MESSAGE 1=This program rocks.
+        MESSAGE 99= ---  Welcome to Mecca  ---
+
+   ...except you can make the messages say whatever you want.  The
+   message numbers range from 0 to 99.  
+
+
+3. DIRECTLY ACCESSING THE MAPS: there are now a total of 25 maps,
+     numbered 1 through 25, all accessible by a 2-key command string.
+     The command string is simply the two digits to make up the
+     map number.  You must use the keys from 0 to 9 at the TOP of
+     your keyboard - not from the numeric keypad.  For single-digit
+     maps (1-9), pad them with a zero.  For example, to select map 12,
+     you would enter '1' then '2'.  For map 5, you would press '0'
+     then '5'.  You can press 'ESC' after the first digit to cancel
+     the map selection.  (Pressing it again will exit.)
+
+
+4. RATING SYSTEM:  Do you have any screens that you just hate?  Or some
+   you really, really love?  Wouldn't you like a rating system where
+   you could rate each screen, in order to control how frequently it
+   gets randomly chosen?  Now you can.
+
+   When you're at the screen you want to rate, use the '<' and '>' keys
+   to give it fewer or more 'stars,' respectively.  A screen can have
+   anywhere from 0 to 5 stars.  Zero stars means it will never be
+   randomly chosen, while 5 means that it will be chosen more often.
+   (The formula is simple: the probability that a mode will be chosen
+   is equal to that mode's rating, divided by the sum of all the modes'
+   ratings.)
+
+   If you give a mode zero stars, then the only way you'll ever see it
+   again is by directly selecting it with the numbers at the top of your
+   keyboard (or if you load a preset for that screen).
+
+
+
++-------------------------+
+|   CONFIGURATION PANEL   |
++-------------------------+
+
+This section describes the function of each control in the configuration panel.
+
+
+Graphics Options:
+
+  Video Mode - this dropdown box lets you pick what video mode you want to run 
+      the screensaver in.  The lowest possible is 320 pixels by 200 pixels 
+      (320x200).  The highest possible is 1024x768 for the screensaver and
+      640x480 for the plugin.  In addition, you can select the color depth:
+      8, 16, or 32-bit.  8-bit mode gives you 256 colors, and you can the color
+      palette during the program with the 'p' key.  In 16-bit color, 65000 
+      colors are available, but the 'p' key has no effect.  In 32-bit color, 
+      16.7 million colors are available.  The hicolor modes (16 and 32-bit)
+      are substantially slower because 3 buffers must be processeds (one for 
+      each red, green, and blue channel) whereas in 8-bit mode only 1 buffer
+      must be processed.  Also, 16-bit mode is further slowed for technical
+      reasons (three 8-bit values must be clipped & shifted into one 16-bit
+      value for every pixel of every frame).  MMX is used to the highest
+      possible extent in all screen functions, bit-chomping, and memory moves.
+
+      The default video mode is 640x480x8.
+
+      Newer video cards will be able to enumerate all their video modes, so
+      everything on the list is a video mode that will work for you.  Older
+      video cards don't have this capability; in this case, ALL possible video
+      modes are listed.  Some will not work.  If you select one and try to
+      run the program, and it reverts to the default video mode, then your
+      video card can't handle that mode.  Try a different one.
+
+
+
+  SLIDERS
+
+  Vertical screen size - this lets you set what percentage of the screen is 
+      filled by graphics.  You can set it from 30% to 100%.  A setting near 
+      50% or 60% creates a nice letterbox effect.  The entire width of the 
+      screen is always used; this just sets the vertical size.  Higher settings
+      are proportionally slower.
+
+  Frames between screen changes - this lets you set how many frames will display
+      between map (screen) changes.  While you watch one map or screen in the 
+      program, the next one is being generated in the background, and when it
+      is finished, it immediately takes effect (unless you lock the screen with
+      the 'L' key).  A lower setting will make the program slightly slower because
+      larger chunks of the map will have to be generated each frame.  A setting of
+      about 300-400 is recommended.
+
+  Frame idle delay - set this to 0 (zero) if you want maximum speed out of the
+      program.  However, if you like the resolution you're at and the animation
+      is too fast, set this to 10 milliseconds or so.  The program will then 
+      pause every frame for this many milliseconds and let Windows or Winamp 
+      do its processing, and you'll see slower, smoother animation.  After
+      getting the screen dimensions & color depth set to your tastes, if you're
+      getting more than 30 frames per second, adjust this slider so that you
+      only get 30 frames per second.  Trust me - it will look better!
+
+  Use coarse palettes - this lets you set how often a 'coarse palette' is used.
+      This only applies to 8-bit color modes.  A 'coarse palette' has a rough
+      band in the dark area of the palette; this brightens up the screen and 
+      heavily accentuates the dither patterns.  
+
+  Use solar palettes - this lets you set how often a 'solar palette' is used.
+      This only applies to 8-bit color modes.  A 'solar palette' has soft, 
+      repeating bands of color in it.  The non-monotone nature of these palettes
+      is their sale point.
+
+  8-bit gamma correction - if the screen is too dark for you, crank this up.
+      This only applies to 8-bit color modes.
+
+  Default wave scaling - you can use the j/k keys during the program to scale
+      the amplitude of the sound waves down & up, respectively.  If you always
+      find yourself scaling them to a certain size every time you start the
+      program, you can adjust this slider so that they start there automatically.
+      However, it is highly recommended you adjust Windows' volumes (for the
+      screensaver) or Winamp's volume (for the plugin) before doing this.  
+      These volumes should always be set to 50% (halfway) for optimal results.
+
+  Random song title popups - this slider lets you pick how often the song
+      titles should randomly pop up on the screen.  If the "suppress
+      song title popups" option is on, this slider will have no effect.
+
+
+Sound Options:
+  
+  Sound input device - the only option here is Winamp.
+
+  Suppress 'press h for help' message - every time you move the mouse, the 
+      program pops up a message that says something like 'press h for help - 
+      ESC/click to exit'.  If this bugs you, use this checkbox to turn it
+      off.
+
+  Suppress song title popups - whenever the song changes, Geiss will
+      pop the new song name up on the screen for a fractional second
+      and then let it blur into the background.  To disable song title
+      popups, check this box.
+
+  Minimize Winamp before running [FIXES FLICKER] - this will minimize
+      Winamp's main window while Geiss is running.  This saves CPU time
+      (as Winamp is not trying to redraw itself) and alleviates problems
+      where Winamp tries to paint over the DirectDraw surface (Geiss)
+      (this is the "flicker").  If you have problems with Winamp not
+      being accessible after Geiss is run (i.e., it couldn't be un-
+      minimized properly), try disabling this checkbox.  Otherwise,
+      leave it on.
+
+  Generate debug info in c:\g_debug.txt - if you're having problems or think you've
+      found a bug, enable this checkbox and run the program until the bug occurs.
+      Then e-mail the file c:\g_debug.txt to me, along with a description
+      of the bug.  Helpful information to include is your operating system, 
+      version, Winamp version (if using the plugin), machine speed, RAM, how 
+      many and what other programs were open, version of DirectX, whether or not
+      the problem happens every time, etc.
+
+
+
+
+TIPS
+----
+1. You should try all the video modes listed to see which one looks
+    and runs best on your system; there are vast differences between
+    them, in image quality, speed, and color depth.  8-bit color modes
+    are recommended for their superior speed/efficiency.
+2. If you really want to squeeze out a higher frame rate, minimize
+    other applications before running Geiss.  This can also help
+    to reduce choppiness.
+3. 'GEISS' rhymes with 'ice'.  It starts with a hard 'g' sound, as in
+    'gastrocnemius'.
+4. Don't miss the help screen - press 'h' to turn it on/off at any
+    time.
+
+
+
+
+
+
+UPDATE INFORMATION
+------------------
+web:         http://www.geisswerks.com/
+
+The web site will always have the most up-to-date version
+of Geiss available for download.  It also hosts installation
+instructions and up-to-date troubleshooting tips for both
+the plugin and screensaver.  
+
+
+
+TERMS OF USE / COPYRIGHT INFORMATION / PUBLIC DISPLAY
+-----------------------------------------------------
+Geiss is 100 percent free for personal use.  No registration is required.
+Any commercial use of this program, however, requires the consent of the
+author.  For large ventures this might involve a licensing fee.  Images
+and video sequences generated with this program remain the copyright 
+of Ryan M. Geiss and can not be reproduced or displayed in public
+without permission.
+
+
+LICENSE AGREEMENT
+-----------------
+You may personally use and copy Geiss freely.  However, you may NOT charge
+money for distributing Geiss.  Don't try to sell this program - it's free.
+
+
+DISCLAIMER
+----------
+The author is not responsible for any damages or loss of data that
+occur to your system for using Geiss.  Geiss is distributed freely, and
+if you choose to use Geiss, you take all risk on yourself.  If your
+system appears to have problems when Geiss is run, you should immediately
+discontinue using Geiss.  The author is also not responsible for any
+damages to YOU for watching or using Geiss.  If you are epileptic,
+have a weak heart, or have any other conditions which might make using
+this program dangerous to your health, you should not use this program.
+
+

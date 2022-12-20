@@ -1,0 +1,215 @@
+--------------------------------------------------------------
+Troubleshooting / frequently-asked questions about Geiss
+for Winamp
+--------------------------------------------------------------
+
+NOTICE: If you don't have Winamp or have never heard of
+Winamp, then this program is useless to you - delete it!
+
+INSTALLATION INSTRUCTIONS ARE AVAILABLE ON THE WEB AT
+http://www.geisswerks.com/inst_plug.html
+
+THE MOST RECENT TROUBLESHOOTING/FAQ INFORMATION IS AT
+http://www.geisswerks.com/faq_plug.html
+
+--------------------------------------------------------------
+Before e-mailing me, please MAKE SURE you've done the following:
+--------------------------------------------------------------
+   -read this entire FAQ.  It is short.
+   -downloaded & installed DirectX 3.0 or later.  About 50% of
+       problems are solved by this!
+   -downloaded the latest version of Geiss for Winamp
+   -downloaded the latest version of Winamp
+
+   If the bug persists, then please e-mail me, and mention
+   that you have tried these 4 things.  Make sure you 
+   include your Winamp and Geiss version numbers.  My 
+   e-mail address is in the 'about' box of the config 
+   panel.
+
+--------------------------------------------------------------
+
+Requirements:  Windows 95/98/ME/2000/XP/Vista
+               DirectX 3.0 or later
+               Pentium-200 or faster
+               Latest version of Winamp
+               Sound card
+
+--------------------------------------------------------------
+
+Problem:   Winamp stops at the end of each song.
+Problem:   My Z/X/C/V/B keys don't work.
+
+Solution:  You need to lower Winamp's priority.  Hit CTRL-P to 
+   go to preferences, select the "Audio I/O" tab, then set the
+   slider marked "Process Priority Class" to the "NORMAL" 
+   setting.  Click OK.  The problem should be fixed.  This bug
+   tends to pop up for new Winamp users - older versions of
+   Winamp had the priority set to normal, and when you upgraded
+   that setting was kept.  Newer versions of Winamp have it set
+   to "Highest" by default.
+
+
+--------------------------------------------------------------
+
+Problem:   After I run the plugin, Winamp disappears... it's 
+   only visible as a tiny icon in the system tray, and I can't 
+   bring it back up.
+
+Solution:  The Winamp window is hidden.  To bring it back,
+   right-click its system tray icon, and select "Main Window".
+   Then **do it a second time**, and Winamp will pop up.  To
+   prevent this from happening in the future, hit CTRL+P to go 
+   to Winamp's preferences, select the "Options" tab, and in 
+   the bottom left corner, under "Show Winamp In:", select 
+   "Taskbar Only (like normal programs)."  This should prevent 
+   the problem from occurring in the future.
+
+
+--------------------------------------------------------------
+
+Problem:   After I run the plugin, my mouse is misaligned... I 
+           can't properly click on things.
+
+Solution:  In Winamp's preferences, uncheck the "Use Winamp
+   Cursors" option.  (This bug should be fixed in Geiss 3.50
+   and later when using Geiss's "Minimize Winamp before 
+   running" option.)
+
+
+--------------------------------------------------------------
+
+Problem:   When I run the plugin, it says something about 'DirectDraw
+           couldn't set EXCLUSIVE or FULLSCREEN mode'.
+
+Solution:  Make sure you're not using the DIRECTSOUND output plugin
+           underneath Winamp... you have to use the WAVEOUT output
+           plugin.  This very often does the trick.  If it doesn't,
+           either DirectDraw is not installed properly (try seeing if
+           other programs can run it fullscreen) or your video card
+           might have problems.
+
+
+--------------------------------------------------------------
+
+Problem:   When I go to run the plugin, the config panel pops
+           up, and the plugin won't run.
+
+Solution:  Download the latest version of the plugin.  This
+   was fixed in version 3.22.   If that doesn't work, and you're
+   sure it's version 3.22 you're working with,  please be sure
+   to e-mail me.  
+
+
+--------------------------------------------------------------
+
+Problem:   When running the plugin, the screen flickers
+           occasionally or a lot... it looks like the main
+           Winamp window is still trying to draw itself onto
+           the screen.
+
+Solution:  Make sure you have Geiss 3.50 or later.  Then make 
+   sure the "Minimize Winamp before running" checkbox is 
+   checked (from the Geiss config panel).  If you still have 
+   problems please let me know.
+     
+
+--------------------------------------------------------------
+
+Problem:   There are often artifacts (stray pixels) at the 
+           screen edges and they won't go away.
+
+Solution:  During the plugin, press 'r' to refresh the screen.  
+   This will clear the edges.  If they persist, see the above 
+   problem.
+
+
+--------------------------------------------------------------
+
+Problem:   I select a new video mode, but it just goes back
+           to the default every time.
+
+Solution:   None - your video card doesn't support that mode;
+   you must pick another.  Older video cards can't properly
+   enumerate what video modes they support, so they just list
+   them all.  If you have one of these video cards, you might
+   have to dig around to find a video mode that really works.
+      
+
+--------------------------------------------------------------
+
+Problem:   Geiss gives me an error message that says "Ordinal
+           Not Found - The ordinal 6 could not be located in
+           the dynamic link library DSOUND.dll."
+
+Solution:  You need to download and reinstall DirectX 3.0 or
+   later.  You can download DirectX 6.0 from Microsoft on the
+   web at http://www.microsoft.com/directx/download.asp .
+
+
+--------------------------------------------------------------
+
+Problem:   When I try to run Geiss it gives me an error box that
+           says, "Geiss executed an illegal instruction at..."
+
+Solution:  You probably have version 3.60 of Geiss and a Cyrix
+   5x86 processor.  This was fixed in Geiss 3.61.
+
+
+--------------------------------------------------------------
+
+Question:  Are you going to make a 3dfx version, or support AMD's
+           3dNOW! instructions?  It would be a lot faster.
+
+Answer:    No - 3dfx is not applicable to this program.  Geiss
+   is neither polygon-based or sprite-based, and therefore the
+   hardware acceleration of 3dfx or other 2d/3d systems would
+   offer it no benefits.  In addition, it is mostly integer
+   math, and 3dNOW! is only good for floating point math (which
+   is much, much slower to start with, so I won't be switching
+   to it!).
+
+
+--------------------------------------------------------------
+
+Question:  Why does it run so darn slow?
+
+Answer #1: Have you tried 8-bit color?  This is the target
+   color depth for the program.  Higher bit depths (16,24,32)
+   are there for posterity and the age of 1-gigahertz machines.
+   They require 3 times as much processing: one for each red,
+   green and blue buffer, as opposed to one monochrome
+   (paletted) buffer in 8-bit modes; and then the blit (image
+   copy) to the video card has to send about four times the
+   volume of data every frame.  As you can see, 8-bit color
+   is going to be a lot smoother.
+
+Answer #2: Have you tried a lower resolution, like 640x480,
+   or tried setting your "vertical screen size" to about 50%?
+   The image is smooth enough that once you're at 640x480,
+   you can't see much of a difference between it and higher
+   resolutions.  Also, the 50% vertical screen size saves a
+   lot of CPU time and makes a cool letterbox effect.
+
+Answer #3: Are you running an AMD or Cyrix (as opposed to
+   Intel)?  That could be it.  I've been able to tweak the
+   main loop to very high frame rates on the Intel, but no
+   matter what I try for the AMD, I can't get the same
+   performance out of it.  The AMD and Cyrix are good
+   processors, but for this specific muscle of the processor,
+   they don't hold up as well.  Other related hardware
+   could be RAM... slow RAM will hurt you, or a slow or
+   small L2 cache will hurt very bad.  Also, a cheap
+   motherboard with a slow bus could drop performance too.
+   Your video card shouldn't make a huge difference, though,
+   as long as it has EDO or faster RAM, and is PCI or AGP
+   (AGP is not taken advantage of yet... anybody want to buy
+   me an AGP motherboard & video card so I can do it? :).
+   Also, a 3d-accelerated video card will make NO difference..
+   What you see in Geiss right now is not hardware accelerated
+   (nor can it be).
+
+Answer #4: Don't forget to minimize other windows first...
+   this can make a huge difference, especially under '98.
+
+

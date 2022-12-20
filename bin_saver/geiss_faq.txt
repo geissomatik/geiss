@@ -1,0 +1,195 @@
+--------------------------------------------------------------
+Troubleshooting / frequently-asked questions about Geiss
+(screensaver version)
+--------------------------------------------------------------
+
+INSTALLATION INSTRUCTIONS ARE AVAILABLE ON THE WEB AT
+http://www.geisswerks.com/inst_ss.html
+
+THE MOST RECENT TROUBLESHOOTING/FAQ INFORMATION IS AT
+http://www.geisswerks.com/faq_ss.html
+
+--------------------------------------------------------------
+Before e-mailing me, please MAKE SURE you've done the following:
+--------------------------------------------------------------
+   -read this entire FAQ.  It is short.
+   -downloaded & installed DirectX 3.0 or later.  About 50%
+       of problems are solved by this!
+   -downloaded the latest version of the Geiss screensaver
+   -if the bug persists, then please e-mail me, and mention
+       that you have tried these 3 things.  My e-mail address
+       is in the 'about' box of the config panel.  Thank you.
+
+--------------------------------------------------------------
+
+Requirements:  Windows 95/98/ME/2000/XP/Vista
+               DirectX 3.0 or later
+               Pentium-200 or faster
+
+Recommended:   Sound card
+               CD-Audio cable            
+
+--------------------------------------------------------------
+
+Problem:   When I run the screensaver, it gives me an error that 
+           says "DSERR_BADFORMAT".
+     
+Solution:   This is a common problem.  You probably 
+   have an "Open Program" sound effect turned on, and you
+   need to turn it off.  Go to the control panel, double-
+   click 'Sounds', and scroll down to "Open Program."  Make
+   sure that there is no sound associated with opening a
+   program - if there is, turn it off.  If this still
+   doesn't fix the problem, make sure your sound card
+   supports 16-bit, 44100 Hz, stereo sound (99% do - only
+   very old cards are at risk here).  As a last resort, try
+   to locate the most recent drivers for your sound card.
+     
+
+--------------------------------------------------------------
+
+Problem:   I don't see any reaction to sound (during the screensaver). 
+Problem:   I don't see a waveform on the screen (during the screensaver).
+     
+Solution:   
+
+   -Hopefully you realize you need a functioning sound
+      card for this to work.
+
+   -Make sure that Windows' volume settings are at about
+      50% for your microphone, CD-audio, and line-in.  Do
+      this by clicking the Start Menu button, then going to
+      Programs, Accessories, Multimedia, and finally, Volume
+      Control.  Then adjust the appropriate slider bars (to
+      about half-way).  If any are missing, go to the Options
+      menu, select Properties, then scroll through the list
+      and select (check) whatever is missing (e.g. microphone,
+      cd-audio, etc.).
+
+   -Also try this: from Windows' volume control, on the menu 
+      click Options/Properties, select 'Recording', and hit OK.  
+      Now make sure that each [recording] channel has the 
+      "SELECT" box checked next to it, and that the volumes 
+      are all set to 50% or higher.
+
+   -If that doesn't work, and you are trying to get sound
+      from an audio CD in your cd-rom drive, you might be
+      missing a <EM>cd-audio cable</EM> which connects your
+      cd-rom drive to your sound card.  It is easiest to
+      check first if the sound works with, say, a microphone
+      before checking for the cable.  If the microphone works
+      (i.e. you see a sound wave on the screen when you speak
+      into it), then you're probably missing the cable (they
+      run about $5).  If the microphone doesn't work, keep
+      troubleshooting.
+
+   -Make sure you have the most recent version of the drivers
+      for your sound card.  Also make sure the sound card is
+      less than 5 years old (it must be able to handle 16-bit,
+      44100 Hz, stereo sound).  
+
+   -Make sure you have at least DirectX 5.0 or later installed.
+      If it's been a long time since you installed it, try
+      installing DirectX 6.0 fresh.
+     
+
+--------------------------------------------------------------
+
+Problem:   I select a new video mode, but it just goes back to
+           the default every time.
+
+Solution:   None - your video card doesn't support that mode;
+   you must pick another.  Older video cards can't properly
+   enumerate what video modes they support, so they just list
+   them all.  If you have one of these video cards, you might
+   have to dig around to find a video mode that really works.
+      
+
+--------------------------------------------------------------
+
+Problem:   I can't get the screensaver to use password
+           protection.
+Problem:   The screensaver's preview window doesn't show
+           anything.
+
+Solution:  Darn right it's broken - the screensaver doesn't
+   support passwords or a preview.  Sorry, I have classes to
+   study for!  :)
+      
+
+--------------------------------------------------------------
+
+Problem:   Geiss gives me an error message that says "Ordinal
+           Not Found - The ordinal 6 could not be located in
+           the dynamic link library DSOUND.dll."
+
+Solution:  You need to download and reinstall DirectX 3.0 or
+   later.  You can download DirectX 6.0 from Microsoft on the
+   web at http://www.microsoft.com/directx/download.asp .
+
+
+--------------------------------------------------------------
+
+Problem:   When I try to run Geiss it gives me an error box that
+           says, "Geiss executed an illegal instruction at..."
+
+Solution:  You probably have version 3.60 of Geiss and a Cyrix
+   5x86 processor.  This was fixed in Geiss 3.61.
+
+
+--------------------------------------------------------------
+
+Question:  Are you going to make a 3dfx version, or support AMD's
+           3dNOW! instructions?  It would be a lot faster.
+
+Answer:    No - 3dfx is not applicable to this program.  Geiss
+   is neither polygon-based or sprite-based, and therefore the
+   hardware acceleration of 3dfx or other 2d/3d systems would
+   offer it no benefits.  In addition, it is mostly integer
+   math, and 3dNOW! is only good for floating point math (which
+   is much, much slower to start with, so I won't be switching
+   to it!).
+
+
+--------------------------------------------------------------
+
+Question:  Why does it run so darn slow?
+
+Answer #1: Have you tried 8-bit color?  This is the target
+   color depth for the program.  Higher bit depths (16,24,32)
+   are there for posterity and the age of 1-gigahertz machines.
+   They require 3 times as much processing: one for each red,
+   green and blue buffer, as opposed to one monochrome
+   (paletted) buffer in 8-bit modes; and then the blit (image
+   copy) to the video card has to send about four times the
+   volume of data every frame.  As you can see, 8-bit color
+   is going to be a lot smoother.
+
+Answer #2: Have you tried a lower resolution, like 640x480,
+   or tried setting your "vertical screen size" to about 50%?
+   The image is smooth enough that once you're at 640x480,
+   you can't see much of a difference between it and higher
+   resolutions.  Also, the 50% vertical screen size saves a
+   lot of CPU time and makes a cool letterbox effect.
+
+Answer #3: Are you running an AMD or Cyrix (as opposed to
+   Intel)?  That could be it.  I've been able to tweak the
+   main loop to very high frame rates on the Intel, but no
+   matter what I try for the AMD, I can't get the same
+   performance out of it.  The AMD and Cyrix are good
+   processors, but for this specific muscle of the processor,
+   they don't hold up as well.  Other related hardware
+   could be RAM... slow RAM will hurt you, or a slow or
+   small L2 cache will hurt very bad.  Also, a cheap
+   motherboard with a slow bus could drop performance too.
+   Your video card shouldn't make a huge difference, though,
+   as long as it has EDO or faster RAM, and is PCI or AGP
+   (AGP is not taken advantage of yet... anybody want to buy
+   me an AGP motherboard & video card so I can do it? :).
+   Also, a 3d-accelerated video card will make NO difference..
+   What you see in Geiss right now is not hardware accelerated
+   (nor can it be).
+
+Answer #4: Don't forget to minimize other windows first...
+   this can make a huge difference, especially under '98.
+

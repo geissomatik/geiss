@@ -1,0 +1,295 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_CONFIG DIALOGEX 0, 0, 428, 297
+STYLE DS_SYSMODAL | DS_SETFONT | DS_MODALFRAME | DS_SETFOREGROUND | 
+    DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Geiss 4.29"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    PUSHBUTTON      "OK",IDOK,319,276,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,371,276,50,14
+    PUSHBUTTON      "About",IDABOUT,319,260,50,14
+    PUSHBUTTON      "Disclaimer",IDREG,371,260,50,14
+    COMBOBOX        IDC_ADAPTER,11,30,204,128,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    COMBOBOX        IDC_BITDEPTHCOMBO,11,55,203,128,CBS_DROPDOWNLIST | 
+                    CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    CONTROL         "Slider1",IDC_SIZESLIDER,"msctls_trackbar32",TBS_NOTICKS | 
+                    WS_TABSTOP,94,90,102,13
+    CONTROL         "Slider1",IDC_SHIFT_SLIDER,"msctls_trackbar32",
+                    TBS_AUTOTICKS | TBS_NOTICKS | WS_TABSTOP,94,115,102,13
+    CONTROL         "Slider1",IDC_SOLAR_SLIDER,"msctls_trackbar32",
+                    TBS_AUTOTICKS | TBS_NOTICKS | WS_TABSTOP,94,139,101,13
+    CONTROL         "Slider1",IDC_COARSE_SLIDER,"msctls_trackbar32",
+                    TBS_AUTOTICKS | TBS_NOTICKS | WS_TABSTOP,93,162,101,13
+    CONTROL         "Slider1",IDC_GAMMA_SLIDER,"msctls_trackbar32",
+                    TBS_AUTOTICKS | TBS_NOTICKS | WS_TABSTOP,94,185,101,13
+    CONTROL         "Slider1",IDC_WAVESCALE,"msctls_trackbar32",
+                    TBS_AUTOTICKS | TBS_NOTICKS | WS_TABSTOP,94,208,101,13
+    CONTROL         "Use beats to determine wave brightness",IDC_BEATDET,
+                    "Button",BS_AUTOCHECKBOX | BS_TOP | BS_MULTILINE | 
+                    WS_TABSTOP,48,229,141,10
+    CONTROL         "Don't base the wave colors on the music",IDC_WAVECOLOR,
+                    "Button",BS_AUTOCHECKBOX | BS_TOP | BS_MULTILINE | 
+                    WS_TABSTOP,48,241,145,10
+    PUSHBUTTON      "Advanced Options",IDADVANCED,77,262,82,14
+    COMBOBOX        IDC_SOUND,242,33,174,81,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    CONTROL         "SOUND ENABLED",IDC_SOUNDON,"Button",BS_AUTOCHECKBOX | 
+                    BS_TOP | WS_TABSTOP,242,52,80,9
+    PUSHBUTTON      "Run ""sndvol32 /r""",ID_SNDVOL,243,115,81,14
+    CONTROL         "Suppress 'press h for help' message",IDC_HELPMSG,"Button",
+                    BS_AUTOCHECKBOX | BS_TOP | BS_MULTILINE | WS_TABSTOP,244,
+                    160,162,10
+    CONTROL         "Suppress all text messages (such as 'Locked')",
+                    IDC_SUPPRESSALLMSG,"Button",BS_AUTOCHECKBOX | BS_TOP | 
+                    BS_MULTILINE | WS_TABSTOP,244,171,168,10
+    CONTROL         "Suppress song title popups",IDC_MAGIC,"Button",
+                    BS_AUTOCHECKBOX | BS_TOP | BS_MULTILINE | WS_TABSTOP,244,
+                    182,168,10
+    CONTROL         "Minimize Winamp before running (fixes flicker)",
+                    IDC_MAGIC2,"Button",BS_AUTOCHECKBOX | BS_TOP | 
+                    BS_MULTILINE | NOT WS_VISIBLE | WS_DISABLED | WS_TABSTOP,
+                    244,265,53,10
+    CONTROL         "Generate debug info in c:\\g_debug.txt",IDC_DEBUGINFO,
+                    "Button",BS_AUTOCHECKBOX | BS_TOP | BS_MULTILINE | 
+                    WS_TABSTOP,244,194,136,10
+    LTEXT           "100%",IDC_STATIC,172,82,17,8
+    LTEXT           "30%",IDC_STATIC,98,82,29,9
+    CONTROL         "Dither on",IDC_DITHER,"Button",BS_AUTOCHECKBOX | BS_TOP | 
+                    BS_MULTILINE | NOT WS_VISIBLE | WS_DISABLED | WS_TABSTOP,
+                    249,270,44,8
+    CONTROL         "Dither randomly",IDC_RANDOMDITHER,"Button",
+                    BS_AUTOCHECKBOX | BS_TOP | BS_MULTILINE | NOT WS_VISIBLE | 
+                    WS_DISABLED | WS_TABSTOP,235,273,65,10,WS_EX_RTLREADING
+    LTEXT           "Sound input device:",IDC_STATIC,243,22,88,9
+    GROUPBOX        "Sound Options",IDC_STATIC,233,7,188,131
+    GROUPBOX        "Graphics Options",IDC_STATIC,6,7,217,284
+    LTEXT           "...",IDC_TEXT1,246,217,170,24
+    LTEXT           "...",IDC_TEXT2,244,66,169,41
+    LTEXT           "Vertical screen size:",IDC_STATIC,36,83,52,17,0,
+                    WS_EX_RIGHT
+    LTEXT           "often",IDC_STATIC,173,131,18,8
+    LTEXT           "never",IDC_STATIC,97,154,23,9
+    LTEXT           "Use 'shifting' effect:",IDC_STATIC,45,110,43,18,0,
+                    WS_EX_RIGHT
+    LTEXT           "often",IDC_STATIC,173,154,20,8
+    LTEXT           "never",IDC_STATIC,97,131,24,9
+    LTEXT           "Use coarse palettes:",IDC_STATIC,43,133,45,18,0,
+                    WS_EX_RIGHT
+    LTEXT           "+100%",IDC_STATIC,168,177,23,8
+    LTEXT           "none",IDC_STATIC,96,177,29,9
+    LTEXT           "8-bit gamma correction:",IDC_STATIC,38,178,50,18,0,
+                    WS_EX_RIGHT
+    LTEXT           "huge",IDC_STATIC,173,199,19,8
+    LTEXT           "flat",IDC_STATIC,96,199,14,9
+    LTEXT           "Default wave\nscaling:",IDC_STATIC,38,199,50,18,0,
+                    WS_EX_RIGHT
+    LTEXT           "normal",IDC_STATIC,134,199,29,9
+    LTEXT           "never",IDC_STATIC,97,107,29,9
+    LTEXT           "100%",IDC_STATIC,173,107,21,8
+    LTEXT           "Use solar palettes:",IDC_STATIC,42,156,45,18,0,
+                    WS_EX_RIGHT
+    LTEXT           "Monitor:",IDC_STATIC,13,19,59,8
+    LTEXT           "Video Mode:",IDC_STATIC,14,45,59,8
+    GROUPBOX        "Miscellaneous Options",IDC_STATIC,233,143,188,112
+END
+
+IDD_DISC DIALOG  0, 0, 344, 281
+STYLE DS_SYSMODAL | DS_SETFONT | DS_MODALFRAME | DS_SETFOREGROUND | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
+CAPTION "Geiss: First Use"
+FONT 8, "MS Sans Serif"
+BEGIN
+    PUSHBUTTON      "I AGREE",IDOK,235,260,50,14
+    DEFPUSHBUTTON   "Cancel",IDCANCEL,287,260,50,14
+    EDITTEXT        IDC_DISC,7,41,330,206,ES_MULTILINE | ES_AUTOHSCROLL | 
+                    ES_READONLY | WS_VSCROLL
+    LTEXT           "License Agreement and Disclaimer",IDC_STATIC,7,7,141,10
+    LTEXT           "If you have read the license agreement and disclaimer and agree entirely, click 'I AGREE' to proceed.  Otherwise, click 'Cancel.'",
+                    IDC_STATIC,7,254,209,20
+    LTEXT           "Please read this information carefully before clicking 'I AGREE.'",
+                    IDC_STATIC,73,23,207,14
+END
+
+IDD_ABOUT DIALOGEX 0, 0, 214, 142
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "About Geiss"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,81,120,50,14
+    LTEXT           "'Geiss' is copyright (c) 1998-2009 Ryan M. Geiss.\nAll rights reserved.",
+                    IDC_STATIC,11,10,196,20
+    LTEXT           "'Geiss' requires Windows 95/98/2000/XP/Vista and Microsoft DirectX 3.0 or later.  A sound card is highly recommended.",
+                    IDC_STATIC,11,33,185,25
+    LTEXT           "Comments/bugs:  [PLEASE read the FAQ first!]",
+                    IDC_STATIC,19,121,12,10,NOT WS_VISIBLE | WS_DISABLED
+    EDITTEXT        IDC_EDIT1,7,118,6,12,ES_AUTOHSCROLL | ES_READONLY | NOT 
+                    WS_VISIBLE | WS_DISABLED
+    LTEXT           "Web site:  [FAQ, updates, etc.]",IDC_STATIC,11,75,166,9
+    EDITTEXT        IDC_EDIT2,17,95,184,12,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "Please remember to look away every 15 minutes.",
+                    IDC_STATIC,11,62,175,11
+    LTEXT           "",IDC_STATIC,11,107,188,11
+END
+
+IDD_CONFIG2 DIALOGEX 0, 0, 299, 148
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Advanced Options for Geiss"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,242,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,242,24,50,14
+    CONTROL         "Slider1",IDC_FRAMES_SLIDER,"msctls_trackbar32",
+                    TBS_AUTOTICKS | TBS_NOTICKS | WS_TABSTOP,126,19,101,15
+    CONTROL         "Slider1",IDC_DELAY_SLIDER,"msctls_trackbar32",
+                    TBS_AUTOTICKS | TBS_NOTICKS | WS_TABSTOP,126,45,102,15
+    CONTROL         "Slider1",IDC_SHIFTFRAMES_SLIDER,"msctls_trackbar32",
+                    TBS_AUTOTICKS | TBS_NOTICKS | WS_TABSTOP,127,71,101,15
+    CONTROL         "Slider1",IDC_DISSOLVE_SLIDER,"msctls_trackbar32",
+                    TBS_AUTOTICKS | TBS_NOTICKS | WS_TABSTOP,127,96,101,15
+    CONTROL         "Slider1",IDC_MAGICSLIDER,"msctls_trackbar32",
+                    TBS_AUTOTICKS | TBS_NOTICKS | WS_TABSTOP,127,121,102,15
+    LTEXT           "25 ms",IDC_STATIC,203,38,24,8
+    LTEXT           "none",IDC_STATIC,129,37,29,9
+    LTEXT           "Frame idle delay: (**crank this up\r\nif it runs too fast!!**)",
+                    IDC_STATIC,7,46,110,18,0,WS_EX_RIGHT
+    LTEXT           "60",IDC_STATIC,213,11,14,8
+    LTEXT           "1",IDC_STATIC,130,11,29,9
+    LTEXT           "Seconds between map changes:",IDC_STATIC,7,20,110,18,0,
+                    WS_EX_RIGHT
+    LTEXT           "often",IDC_SLIDERTEXT3,207,112,19,8
+    LTEXT           "never",IDC_SLIDERTEXT2,129,112,31,9
+    LTEXT           "Random song title popups:",IDC_SLIDERTEXT,8,122,109,18,
+                    0,WS_EX_RIGHT
+    LTEXT           "50",IDC_STATIC,214,63,12,8
+    LTEXT           "2",IDC_STATIC,131,63,29,9
+    LTEXT           "Minimum no. of frames between shifts for 'shifting' effect:",
+                    IDC_STATIC,7,69,111,18,0,WS_EX_RIGHT
+    LTEXT           "100",IDC_STATIC,210,88,12,8
+    LTEXT           "2",IDC_STATIC,131,88,29,9
+    LTEXT           "No. of frames to show embedded messages before dissolve:",
+                    IDC_DISSOLVETIME,7,93,111,18,0,WS_EX_RIGHT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_CONFIG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 421
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 290
+    END
+
+    IDD_DISC, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 337
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 274
+    END
+
+    IDD_ABOUT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 207
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 135
+    END
+
+    IDD_CONFIG2, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 292
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 141
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_ICON1               ICON                    "Scricon3.ico"
+IDI_ICON2               ICON                    "icon2.ico"
+IDI_BACKUP              ICON                    "icon3.ico"
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+
