@@ -37,6 +37,7 @@
 
 #include "proc_map.h"
 #include <ddraw.h>
+#include <memoryapi.h>
 
 //-----for slider--------
 //#include <math.h>
@@ -48,19 +49,6 @@ extern bool bMMX;
 //-----------------------
 
 
-
-/*
-  * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-  * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-  * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-  VERY, VERY IMPORTANT:
-  You must build this with Visual Studio 6.0.
-  Visual Studio 2003 doesn't seem to let you read code segments ! ! !
-  * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-  * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-  * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-  
-*/
 
 //------------------------------------------------------------------
 static void *realAddress(void *fn)
@@ -609,7 +597,8 @@ void Process_Map_Asm(void *p1, void *p2)//, LPDIRECTDRAWSURFACE lpDDSurf)
 		// and hard-code our custom variables into the instructions (...our
 		// solution for not having enough registers), then execute the code.
 
-		unsigned char code[8192];
+		const SIZE_T code_size_bytes = 8192;
+		unsigned char * const code = (unsigned char *)VirtualAlloc(NULL, code_size_bytes, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
 		int codepos=0;
     
 		int start_codepos[16];
@@ -658,6 +647,8 @@ void Process_Map_Asm(void *p1, void *p2)//, LPDIRECTDRAWSURFACE lpDDSurf)
 			popa            // release builds will break without this!
 			emms
 		};
+
+		VirtualFree(code, code_size_bytes, MEM_DECOMMIT);
 	}
 	else //32-bit case
 	{
@@ -667,7 +658,8 @@ void Process_Map_Asm(void *p1, void *p2)//, LPDIRECTDRAWSURFACE lpDDSurf)
 			// and hard-code our custom variables into the instructions (...our
 			// solution for not having enough registers), then execute the code.
 
-			unsigned char code[8192];
+			const SIZE_T code_size_bytes = 8192;
+			unsigned char * const code = (unsigned char *)VirtualAlloc(NULL, code_size_bytes, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
 			int codepos=0;
     
 			int start_codepos[16];
@@ -716,6 +708,8 @@ void Process_Map_Asm(void *p1, void *p2)//, LPDIRECTDRAWSURFACE lpDDSurf)
 				popa            // release builds will break without this!
 				emms
 			};
+
+			VirtualFree(code, code_size_bytes, MEM_DECOMMIT);
 		}
 		else // MMX version
 		{
