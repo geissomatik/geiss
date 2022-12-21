@@ -1,4 +1,10 @@
 
+What's New in Geiss vX.XX (XX/XX/XXXX)
+----------
+1. License changed to be Software Libre and Open Source under
+   the 3-Clause BSD License.
+
+
 What's New in Geiss v4.29 (6/20/2009)
 ----------
 1. Default video mode selection now matches whatever your primary monitor is set to.
