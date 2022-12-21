@@ -3,7 +3,7 @@
 //                          / __| __|_ _/ __/ __|
 //                         | (_ | _| | |\__ \__ \
 //                          \___|___|___|___/___/
-// BSD 3-Clause License
+// 3-Clause BSD License
 //
 // Copyright (c) 1998-2022 Ryan Geiss (@geissomatik)
 //
