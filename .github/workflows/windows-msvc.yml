@@ -1,0 +1,76 @@
+# This file is part of: Geiss screensaver and Winamp music visualization plug-in
+#                           ___ ___ ___ ___ ___
+#                          / __| __|_ _/ __/ __|
+#                         | (_ | _| | |\__ \__ \
+#                          \___|___|___|___/___/
+# BSD 3-Clause License
+#
+# Copyright (c) 2022-2022 Sebastian Pipping <sebastian@pipping.org>
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+name: Build for Windows using MSVC
+
+on:
+  pull_request:
+  push:
+  schedule:
+    - cron: '0 2 * * 5'  # Every Friday at 2am
+
+jobs:
+  checks:
+    name: Build for 32bit x86 Windows using MSVC
+    runs-on: windows-2022
+    steps:
+
+    - uses: actions/checkout@v3.2.0
+
+    - uses: microsoft/setup-msbuild@v1.3
+
+    - name: Generate recent MSVC solution file using CMake
+      run: |-
+        cmake -G "Visual Studio 17 2022" -A Win32 -DCMAKE_BUILD_TYPE=RelWithDebInfo .
+
+    - name: Build both plug-in and screensaver
+      run: |-
+        msbuild -m geiss.sln
+
+    - name: Build plug-in installer + prepare artifacts for upload
+      shell: bash
+      run: |-
+        set -x
+        find . -name .git -prune -o -type f | sort -f
+        cp -v */geiss_scr.exe bin_saver/geiss.scr  # for upload
+        cp -v */vis_geis.dll bin_plugin/  # for upload and installer
+        ./makensis_198 installer_PLUGIN.nsi  # writes to bin_plugin/
+        find bin_*/ -type f | sort -f
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3.1.1
+      with:
+        name: geiss_win32bin
+        path: bin_*/*
+        if-no-files-found: error

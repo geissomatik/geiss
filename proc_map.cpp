@@ -271,7 +271,13 @@ ALIGN 8
 
 					test     cl, 63
 			          mov   [ebp], dh			// plot
-					jnz      0 //CyrixLoopA                 // every 256th pixel do some prefetches
+					// Produces: "jnz 0", will be replaced live by "jnz CyrixLoopA"; every 256th pixel do some prefetches
+					_emit 0x0F
+					_emit 0x85
+					_emit 0x00
+					_emit 0x00
+					_emit 0x00
+					_emit 0x00
 
 					mov      ebx, 8*128                // need to prefetch 256*6 bytes
 
@@ -287,7 +293,13 @@ ALIGN 8
 					mov      eax, [ebx+esi+64]
 					mov      eax, [ebx+esi+96]
 					sub      ebx, 128
-					jnz      0 //CYRIX_CACHE_ESI_A
+					// Produces: "jnz 0", will be replaced live by "jnz CYRIX_CACHE_ESI_A"
+					_emit 0x0F
+					_emit 0x85
+					_emit 0x00
+					_emit 0x00
+					_emit 0x00
+					_emit 0x00
 					xor      eax, eax
 
 														//---------------------------------------------------------------
@@ -297,7 +309,13 @@ ALIGN 8
 														//---------------------------------------------------------------
 
 						sub   ecx, 0
-						jnz   0// CyrixLoopA
+						// Produces: "jnz 0", will be replaced live by "jnz CyrixLoopA"
+						_emit 0x0F
+						_emit 0x85
+						_emit 0x00
+						_emit 0x00
+						_emit 0x00
+						_emit 0x00
 
 	  pop  ebp
 	  pop  edi
@@ -508,7 +526,13 @@ __declspec ( naked ) void _proc_map_32bit_part01(void) { __asm {
 																//---------------------------------------------------------------
 
 				dec   ecx
-				jnz   0 //NewPixelLoop1
+				// Produces: "jnz 0", will be replaced live by "jnz NewPixelLoop1"
+				_emit 0x0F
+				_emit 0x85
+				_emit 0x00
+				_emit 0x00
+				_emit 0x00
+				_emit 0x00
 
 			pop  ebp
 			pop  edi
