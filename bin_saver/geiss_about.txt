@@ -1,5 +1,5 @@
-GEISS is copyright (c) 1998-2009 by Ryan M. Geiss, as
-well as all images generated with it.  All rights are reserved.
+GEISS is copyright (c) 1998-2022 by Ryan M. Geiss.
+It is licensed under the 3-Clause BSD License.
 
 
 WHAT IS GEISS?
@@ -283,21 +283,36 @@ instructions and up-to-date troubleshooting tips for both
 the plugin and screensaver.  
 
 
-
-TERMS OF USE / COPYRIGHT INFORMATION / PUBLIC DISPLAY
------------------------------------------------------
-Geiss is 100 percent free for personal use.  No registration is required.
-Any commercial use of this program, however, requires the consent of the
-author.  For large ventures this might involve a licensing fee.  Images
-and video sequences generated with this program remain the copyright 
-of Ryan M. Geiss and can not be reproduced or displayed in public
-without permission.
-
-
 LICENSE AGREEMENT
 -----------------
-You may personally use and copy Geiss freely.  However, you may NOT charge
-money for distributing Geiss.  Don't try to sell this program - it's free.
+3-Clause BSD License
+
+Copyright (c) 1998-2022 Ryan Geiss (@geissomatik)
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its
+   contributors may be used to endorse or promote products derived from
+   this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 DISCLAIMER
