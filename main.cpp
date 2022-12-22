@@ -3142,7 +3142,7 @@ BOOL CALLBACK DisclaimerDialogProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lPara
 
         SendMessage( GetDlgItem( hwnd, IDC_DISC ), EM_SETLIMITTEXT, 16000, 0 );
 
-          wsprintf(buf,
+          strcpy(buf,
                 "Geiss is entirely copyright (c) 1998-2022 by Ryan M. Geiss.\r\n"
                 "It is licensed under the 3-Clause BSD License.\r\n"
                 "\r\n"
@@ -3153,7 +3153,7 @@ BOOL CALLBACK DisclaimerDialogProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lPara
                 "3. Pentium-200 or faster processor.\r\n"
                 "\r\n"
                 );
-        wsprintf((char *)(buf+strlen(buf)), 
+        strcat(buf,
                 "LICENSE AGREEMENT\r\n"
                 "-----------------\r\n"
                 "3-Clause BSD License\r\n"
@@ -3186,7 +3186,7 @@ BOOL CALLBACK DisclaimerDialogProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lPara
                 "OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.\r\n"
                 "\r\n"
                 );
-        wsprintf((char *)(buf+strlen(buf)), 
+        strcat(buf,
                 "DISCLAIMER\r\n"
                 "----------\r\n"
                 "The author is not responsible for any damages or loss of data that\r\n"
@@ -3197,7 +3197,7 @@ BOOL CALLBACK DisclaimerDialogProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lPara
                 "\r\n"
             );
 #if SAVER
-        wsprintf((char *)(buf+strlen(buf)), 
+        strcat(buf,
                 "USE PASSWORD FEATURE AT OWN RISK\r\n"
                 "--------------------------------\r\n"
                 "Passwords are supported since version 4.0, but might not be\r\n"
