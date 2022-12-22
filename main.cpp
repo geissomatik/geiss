@@ -3,7 +3,7 @@
 //                          / __| __|_ _/ __/ __|
 //                         | (_ | _| | |\__ \__ \
 //                          \___|___|___|___/___/
-// BSD 3-Clause License
+// 3-Clause BSD License
 //
 // Copyright (c) 1998-2022 Ryan Geiss (@geissomatik)
 //
@@ -3142,9 +3142,9 @@ BOOL CALLBACK DisclaimerDialogProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lPara
 
         SendMessage( GetDlgItem( hwnd, IDC_DISC ), EM_SETLIMITTEXT, 16000, 0 );
 
-          wsprintf(buf,
-                "Geiss is entirely copyright (c) 1998,99 by Ryan M. Geiss.\r\n"
-                "All rights are reserved.\r\n"
+          strcpy(buf,
+                "Geiss is entirely copyright (c) 1998-2022 by Ryan M. Geiss.\r\n"
+                "It is licensed under the 3-Clause BSD License.\r\n"
                 "\r\n"
                 "SYSTEM REQUIREMENTS\r\n"
                 "-------------------\r\n"
@@ -3153,25 +3153,40 @@ BOOL CALLBACK DisclaimerDialogProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lPara
                 "3. Pentium-200 or faster processor.\r\n"
                 "\r\n"
                 );
-        wsprintf((char *)(buf+strlen(buf)), 
-                "TERMS OF USE / COPYRIGHT INFORMATION / PUBLIC DISPLAY"
-                "---------------------------------\r\n"
-                "Geiss is 100 percent free for personal use.  No registration is required.\r\n"
-                "Any commercial use of this program, however, requires the consent of the\r\n"
-                "author.  For large ventures this will involve a licensing fee.  Be wary\r\n"
-                "that every image or video sequence generated with this program is the sole\r\n"
-                "copyright of Ryan M. Geiss and can not be reproduced or displayed in public\r\n"
-                "without permission.\r\n"
-                "\r\n"
-                );
-        wsprintf((char *)(buf+strlen(buf)), 
+        strcat(buf,
                 "LICENSE AGREEMENT\r\n"
                 "-----------------\r\n"
-                "You may personally use and copy Geiss freely.  However, you may NOT charge\r\n"
-                "money for distributing Geiss.  Don't try to sell this program - it's free.\r\n"
+                "3-Clause BSD License\r\n"
+                "\r\n"
+                "Copyright (c) 1998-2022 Ryan Geiss (@geissomatik)\r\n"
+                "\r\n"
+                "Redistribution and use in source and binary forms, with or without\r\n"
+                "modification, are permitted provided that the following conditions are met:\r\n"
+                "\r\n"
+                "1. Redistributions of source code must retain the above copyright notice, this\r\n"
+                "   list of conditions and the following disclaimer.\r\n"
+                "\r\n"
+                "2. Redistributions in binary form must reproduce the above copyright notice,\r\n"
+                "   this list of conditions and the following disclaimer in the documentation\r\n"
+                "   and/or other materials provided with the distribution.\r\n"
+                "\r\n"
+                "3. Neither the name of the copyright holder nor the names of its\r\n"
+                "   contributors may be used to endorse or promote products derived from\r\n"
+                "   this software without specific prior written permission.\r\n"
+                "\r\n"
+                "THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\"\r\n"
+                "AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE\r\n"
+                "IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE\r\n"
+                "DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE\r\n"
+                "FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL\r\n"
+                "DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR\r\n"
+                "SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER\r\n"
+                "CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,\r\n"
+                "OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE\r\n"
+                "OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.\r\n"
                 "\r\n"
                 );
-        wsprintf((char *)(buf+strlen(buf)), 
+        strcat(buf,
                 "DISCLAIMER\r\n"
                 "----------\r\n"
                 "The author is not responsible for any damages or loss of data that\r\n"
@@ -3182,7 +3197,7 @@ BOOL CALLBACK DisclaimerDialogProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lPara
                 "\r\n"
             );
 #if SAVER
-        wsprintf((char *)(buf+strlen(buf)), 
+        strcat(buf,
                 "USE PASSWORD FEATURE AT OWN RISK\r\n"
                 "--------------------------------\r\n"
                 "Passwords are supported since version 4.0, but might not be\r\n"

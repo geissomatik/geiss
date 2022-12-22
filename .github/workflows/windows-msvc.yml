@@ -3,7 +3,7 @@
 #                          / __| __|_ _/ __/ __|
 #                         | (_ | _| | |\__ \__ \
 #                          \___|___|___|___/___/
-# BSD 3-Clause License
+# 3-Clause BSD License
 #
 # Copyright (c) 2022-2022 Sebastian Pipping <sebastian@pipping.org>
 #
