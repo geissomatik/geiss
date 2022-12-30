@@ -23,7 +23,7 @@ For a YouTube video showing Geiss in action, please click:
 In order to compile the Geiss Winamp plug-in and/or the Geiss Screensaver,
 you need:
 
-- A Git clone or snapshort of this repository
+- A Git clone or snapshot of this repository
 - CMake >=3.15
 - Microsoft Visual Studio >=9/2008 (due to the current use of MSVC style assembly)
 
