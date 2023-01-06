@@ -603,6 +603,10 @@ void Process_Map_Asm(void *p1, void *p2)//, LPDIRECTDRAWSURFACE lpDDSurf)
     
 		int start_codepos[16];
 
+		if (code == NULL) {
+		    return;
+		}
+
 		//----------------
 		// Paste all the function chunks together into one piece of code.
 		//----------------
@@ -663,6 +667,10 @@ void Process_Map_Asm(void *p1, void *p2)//, LPDIRECTDRAWSURFACE lpDDSurf)
 			int codepos=0;
     
 			int start_codepos[16];
+
+			if (code == NULL) {
+			    return;
+			}
 
 			//----------------
 			// Paste all the function chunks together into one piece of code.
