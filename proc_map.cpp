@@ -39,6 +39,12 @@
 #include <ddraw.h>
 #include <memoryapi.h>
 
+// This disables warning
+// "frame pointer register 'ebp' modified by inline assembly code"
+// for MSVC; for why that's okay, see:
+// https://stackoverflow.com/a/21718937/11626624
+#pragma warning( disable: 4731 )
+
 //-----for slider--------
 //#include <math.h>
 //extern int volpos;
