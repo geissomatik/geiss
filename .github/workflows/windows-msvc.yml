@@ -67,7 +67,7 @@ jobs:
         find bin_*/ -type f | sort -f
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v3.1.1
+      uses: actions/upload-artifact@v3.1.2
       with:
         name: geiss_win32bin
         path: bin_*/*
