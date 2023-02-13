@@ -63,12 +63,29 @@ jobs:
         find . -name .git -prune -o -type f | sort -f
         cp -v */geiss_scr.exe bin_saver/geiss.scr  # for upload
         cp -v */vis_geis.dll bin_plugin/  # for upload and installer
+
         ./makensis_198 installer_PLUGIN.nsi  # writes to bin_plugin/
         find bin_*/ -type f | sort -f
 
-    - name: Upload build artifacts
+        mv bin_plugin/geiss4winamp_429.exe ./  # i.e. out of bin_plugin/
+
+    - name: Upload screensaver binary
       uses: actions/upload-artifact@v3.1.2
       with:
-        name: geiss_win32bin
-        path: bin_*/*
+        name: "geiss_saver_429_${{ github.sha }}"
+        path: "bin_saver/*"
+        if-no-files-found: error
+
+    - name: Upload plug-in binary
+      uses: actions/upload-artifact@v3.1.2
+      with:
+        name: "geiss4winamp_429_${{ github.sha }}"
+        path: "bin_plugin/*"
+        if-no-files-found: error
+
+    - name: Upload plug-in installer
+      uses: actions/upload-artifact@v3.1.2
+      with:
+        name: "geiss4winamp_429_installer_${{ github.sha }}"
+        path: "geiss4winamp_429.exe"
         if-no-files-found: error
