@@ -340,7 +340,6 @@ v4.00
 4.30
 ----------
   TODO:
-    -never push ebp??
     -UNIFNISHED: see NEW_COLORS_430 - great!!!
     -decrease rate of map changes?  it's great to sit for minutes at a time...
       -also, crank down # effects in high color modes - better with just waves...
