@@ -15,7 +15,7 @@ for general information about Geiss please see:
 
 For a YouTube video showing Geiss in action, please click:
 
-[![Video" Geiss visualization for Winamp/MediaMonkey/JetAudio" on YouTube](https://img.youtube.com/vi/pBCvhBcEpHQ/hqdefault.jpg)](https://www.youtube.com/watch?v=pBCvhBcEpHQ)
+[![Video "Windows 95 + Winamp + Geiss = Aesthetic"](https://img.youtube.com/vi/MfFcRsUZCxw/hqdefault.jpg)](https://youtu.be/MfFcRsUZCxw?t=15)
 
 
 # Compiling locally
