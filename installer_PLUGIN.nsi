@@ -72,9 +72,9 @@
 ; ----------------------------------------------------------------
 
 !define PLUGIN_NAME    "Geiss"                 ; Name of the component.  Can have spaces in it.
-!define PLUGIN_CAPTION "Geiss 4.29 Setup"     ; Caption for the installer dialog
+!define PLUGIN_CAPTION "Geiss 4.30 Setup"     ; Caption for the installer dialog
 !define PLUGIN_DLL     "vis_geis.dll"         ; The filename of the actual plugin
-!define PLUGIN_OUTFILE "bin_plugin\geiss4winamp_429.exe"          ; Name of the installer to create
+!define PLUGIN_OUTFILE "bin_plugin\geiss4winamp_430.exe"          ; Name of the installer to create
 
 ; ----------------------------------------------------------------
 Name ${PLUGIN_NAME}
