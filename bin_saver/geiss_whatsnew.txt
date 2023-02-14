@@ -1,8 +1,21 @@
 
-What's New in Geiss vX.XX (XX/XX/XXXX)
+What's New in Geiss v4.30 (3/1/2023)
 ----------
-1. License changed to be Software Libre and Open Source under
-   the 3-Clause BSD License.
+1. Please note that this version might not be fully stable yet on all platforms
+   (Windows/Wine) & media players (Winamp, or others that host Winamp plug-ins).
+   We are hunting down issues and hope to have stability improvements coming soon.
+2. License changed to be Software Libre and Open Source under
+   the 3-Clause BSD License (#2, #3)
+3. Add a CMake-based build system (#1)
+4. Fix compile errors for modern Visual Studio (#1)
+5. Mark generated machine code as executable using VirtualAlloc to
+   support recent MSVCRT (#4, #9)
+6. Add CI based on GitHub Actions and offer build artefacts for download
+   (#1, #5, #6, #13)
+7. Address compiler warnings (#12, #15)
+8. Add a readme file to the project (#7, #8, #14)
+9. Improve debug helpers (#17)
+10. Document and prepare release 4.30 (#16)
 
 
 What's New in Geiss v4.29 (6/20/2009)
