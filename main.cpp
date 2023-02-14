@@ -3557,7 +3557,7 @@ int WINAPI WinMain(HINSTANCE h,HINSTANCE,LPSTR,int)
           return 1;
   }
 
-  //return 0; //exit(0); //beely!
+  return 0;
 }
 
 void EnforceMaxFPS(int max_fps, int bSaveCpu)
