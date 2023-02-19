@@ -3557,7 +3557,7 @@ int WINAPI WinMain(HINSTANCE h,HINSTANCE,LPSTR,int)
           return 1;
   }
 
-  //return 0; //exit(0); //beely!
+  return 0;
 }
 
 void EnforceMaxFPS(int max_fps, int bSaveCpu)
@@ -5827,7 +5827,7 @@ BOOL doInit( HINSTANCE hInstance, int nCmdShow )
      */
 
     dumpmsg("directdrawcreate()...");
-    sprintf(buf, "  guid = %08x %08x", (DWORD*)(&g_DDrawDeviceGUID), (DWORD*)(&g_DDrawDeviceGUID)+1 );
+    sprintf(buf, "  guid = %p", &g_DDrawDeviceGUID );
     dumpmsg(buf);
 
     #if (GRFX==1)
