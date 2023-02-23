@@ -431,7 +431,7 @@ void ReadConfigRegistry()
   // DAMMIT!  This was screening out the 320x200's because of the 200 part
   // in v3.21.  Big bug.  Damn!  Fixed now.
   if (ScrMode==smSaver && (FXW<320 || (FXW%4) != 0 || FXH<200 || (FXH%4) != 0 || (iDispBits%8) != 0))
-  dumpmsg("invalid reg params: width<320, height<200, or iDispBits%8 or FXW%4 or FXH%4 nonzero.");// { ScrMode = smConfig; g_bFirstRun = true; }
+  dumpmsg("invalid reg params: width<320, height<200, or iDispBits%%8 or FXW%%4 or FXH%%4 nonzero.");// { ScrMode = smConfig; g_bFirstRun = true; }
 
   OnFxwFxhUpdated();
   
