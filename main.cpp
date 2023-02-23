@@ -9492,6 +9492,7 @@ void dumpmsg(const char *format, ...)
             if (infile)
             {
                 fprintf(infile, "[Geiss debug file]\n");
+                fflush(infile);
                 fclose(infile);
             }
         }
@@ -9504,6 +9505,7 @@ void dumpmsg(const char *format, ...)
             va_start(args, format);
             vfprintf(infile2, format, args);
             fprintf(infile2, "\n");
+            fflush(infile2);
             fclose(infile2);
         }
     }
