@@ -87,7 +87,7 @@ void LoadPreset(int n)
     while (volpos > t) { volpos--; volscale *= 0.80f; };
 
 
-    // these 8 are handled internally by FX_Apply_Mode()  (init part)
+    // these 8 are handled internally by GenerateChunkOfNewMap()  (init part)
     //char temp[64];
     //GetPrivateProfileString(section,"t1","1",temp,64,inifile); sscanf(temp, "%f", &turn1);
     //GetPrivateProfileString(section,"t2","1",temp,64,inifile); sscanf(temp, "%f", &turn2);
@@ -98,7 +98,7 @@ void LoadPreset(int n)
     //GetPrivateProfileString(section,"f3","1",temp,64,inifile); sscanf(temp, "%f", &f3);
     //GetPrivateProfileString(section,"f4","1",temp,64,inifile); sscanf(temp, "%f", &f4);
     
-    // these 8 are handled internally by FX_Apply_Mode()  (final part)
+    // these 8 are handled internally by GenerateChunkOfNewMap()  (final part)
     //effect[CHASERS] = GetPrivateProfileInt(section,"effect_chasers",0,inifile);
     //effect[BAR]     = GetPrivateProfileInt(section,"effect_bar"    ,0,inifile);
     //effect[DOTS]    = GetPrivateProfileInt(section,"effect_dots"   ,0,inifile);
@@ -122,7 +122,7 @@ void LoadPreset(int n)
     FX_Random_Palette(true);
     y_map_pos = -1;
     g_rush_map = true;
-    FX_Apply_Mode(true, n);
+    GenerateChunkOfNewMap(true, n);
 
     
     

@@ -453,13 +453,13 @@ void Check_For_New_Song_Title()
 		if (!bLocked)
 		{
     		if (y_map_pos == -1) FX_Pick_Random_Mode();   // sets global 'mode' to a valid random number.
-			FX_Apply_Mode();
+			GenerateChunkOfNewMap();
 			/*
 			if (--frames_til_auto_switch == 0)
 			{
 				frames_til_auto_switch = 1000;
 				FX_Pick_Random_Mode();
-				FX_Apply_Mode();
+				GenerateChunkOfNewMap();
 				FX_Random_Palette();
 			}
 			*/
