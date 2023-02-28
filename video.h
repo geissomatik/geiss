@@ -435,16 +435,12 @@ void Check_For_New_Song_Title()
 
 		if (intframe<20) 
 		{ 
-			char buf[32];
-			sprintf(buf, "[frame %d/20 ok]", intframe);
-			dumpmsg(buf);
+			dumpmsg("[frame %d/20 ok]", intframe);
 		}
 
 		if (clearframes > 0)//(intframe <= 4)
 		{
-			char buf[64];
-			sprintf(buf, "frame %d: clearing edges", intframe);
-			dumpmsg(buf);
+			dumpmsg("frame %d: clearing edges", intframe);
 
 			//temp_clock = clock();
 			clearframes--;
@@ -480,9 +476,8 @@ void Check_For_New_Song_Title()
 		FX_YCUT_HIDE_xLINESIZE = FX_YCUT_HIDE * linesize;
 		LINES_TO_DISPLAY = (FXH-FX_YCUT_HIDE*2);
 
-		//char buf[64];
-		//sprintf(buf, "ltd=%d\n", LINES_TO_DISPLAY); dumpmsg(buf);
-		//sprintf(buf, "linesize_over_FXW=%d\n", linesize_over_FXW); dumpmsg(buf);
+		//dumpmsg("ltd=%d", LINES_TO_DISPLAY);
+		//dumpmsg("linesize_over_FXW=%d", linesize_over_FXW);
 
 
     
@@ -604,7 +599,7 @@ void Check_For_New_Song_Title()
 				}
 				else 
 				{
-					dumpmsg("BAD VIDEO MODE: (FXH % 32 != 0 and FXH % 40 != 0)");
+					dumpmsg("BAD VIDEO MODE: (FXH %% 32 != 0 and FXH %% 40 != 0)");
 				}
 
 			}

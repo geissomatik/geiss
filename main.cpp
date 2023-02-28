@@ -501,6 +501,7 @@ saving favorite combinations (10 or so)
 #pragma hdrstop
 #include "resource.h"
 #include <stdio.h>        // for sprintf() for fps display
+#include <stdarg.h>
 #if SAVER
 #include <mmsystem.h>   // for mci/cd stuff
 #endif
@@ -1208,7 +1209,7 @@ void GetWindowsPath(); // sets winpath
 void ReadConfigRegistry();
 void WriteConfigRegistry();
 bool Try_To_Recover();
-void dumpmsg(char *s);
+void dumpmsg(const char *format, ...);
 
 
 #include "effects.h"
@@ -1947,7 +1948,7 @@ void __cdecl GeissProc( void *p )
                         case DDERR_UNSUPPORTED:         dumpmsg("  [DDERR_UNSUPPORTED]");     break;
                         case DDERR_WRONGMODE:           dumpmsg("  [DDERR_WRONGMODE]");       break;
                         case DD_OK:                     dumpmsg("  [OK]");                    break;
-                        default: { char buf[256]; sprintf(buf, "  [UNKNOWN: %08x]"); dumpmsg(buf); } break;
+                        default: { dumpmsg("  [UNKNOWN: %08x]", ddrval); } break;
                     }
                     Sleep(50);
                 }
@@ -1969,7 +1970,7 @@ void __cdecl GeissProc( void *p )
                         case DDERR_UNSUPPORTED:         dumpmsg("  [DDERR_UNSUPPORTED]");     break;
                         case DDERR_WRONGMODE:           dumpmsg("  [DDERR_WRONGMODE]");       break;
                         case DD_OK:                     dumpmsg("  [OK]");                    break;
-                        default: { char buf[256]; sprintf(buf, "  [UNKNOWN: %08x]"); dumpmsg(buf); } break;
+                        default: { dumpmsg("  [UNKNOWN: %08x]", ddrval); } break;
                     }
                     Sleep(50);
                 }
@@ -2186,9 +2187,7 @@ void __cdecl GeissProc( void *p )
         {
             // heh heh... this should never execute.
 
-            char buf[256];  // pwr mgmt
-            sprintf(buf, "[GEISSPROC MESSAGE] frame %d: msg=0x%x, wParam=0x%x", intframe, msg.message, msg.wParam);
-            dumpmsg(buf);
+            dumpmsg("[GEISSPROC MESSAGE] frame %d: msg=0x%x, wParam=0x%x", intframe, msg.message, msg.wParam);
 
             TranslateMessage(&msg);
             DispatchMessage(&msg);
@@ -2405,9 +2404,7 @@ BOOL DoSaver(HWND hparwnd, HINSTANCE hInstance)
             //Sleep(10); // milliseconds
         }
 
-        char buf[256];  // pwr mgmt
-        sprintf(buf, "frame %d: msg=0x%x, wParam=0x%x", intframe, msg.message, msg.wParam);
-        dumpmsg(buf);
+        dumpmsg("frame %d: msg=0x%x, wParam=0x%x", intframe, msg.message, msg.wParam);
 
         TranslateMessage(&msg);
         DispatchMessage(&msg);
@@ -2431,9 +2428,7 @@ BOOL DoSaver(HWND hparwnd, HINSTANCE hInstance)
             // finish up message queue...
             while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
             {
-                char buf[256];  // pwr mgmt
-                sprintf(buf, "frame %d: msg=0x%x, wParam=0x%x", intframe, msg.message, msg.wParam);
-                dumpmsg(buf);
+                dumpmsg("frame %d: msg=0x%x, wParam=0x%x", intframe, msg.message, msg.wParam);
 
                 TranslateMessage(&msg);
                 DispatchMessage(&msg);
@@ -3517,9 +3512,7 @@ int WINAPI WinMain(HINSTANCE h,HINSTANCE,LPSTR,int)
     DWORD dwDXVersion;//, dwDXPlatform;
     dumpmsg("GetDXVersion()...");
     GetDXVersion(&dwDXVersion);//, &dwDXPlatform);
-    char buf[128];
-    sprintf(buf, "DirectX version is %x.", dwDXVersion);
-    dumpmsg(buf);
+    dumpmsg("DirectX version is %x.", dwDXVersion);
 
     if (dwDXVersion == 0)
     {
@@ -3739,27 +3732,21 @@ int render1(struct winampVisModule *this_mod)
     #ifdef PLUGIN
       if (g_this_mod != this_mod)
       {
-          char buf[128];
-          sprintf(buf, "**********ALERT******** Frame %d: value of this_mod changed", intframe);
-          dumpmsg(buf);
+          dumpmsg("**********ALERT******** Frame %d: value of this_mod changed", intframe);
 
           g_this_mod = this_mod;
       }
 
       if (this_mod_hwndParent != this_mod->hwndParent)
       {
-          char buf[128];
-          sprintf(buf, "**********ALERT******** Frame %d: this_mod->hwndParent changed", intframe);
-          dumpmsg(buf);
+          dumpmsg("**********ALERT******** Frame %d: this_mod->hwndParent changed", intframe);
 
           this_mod_hwndParent = this_mod->hwndParent;
       }
 
       if (this_mod_hDllInstance != this_mod->hDllInstance)
       {
-          char buf[128];
-          sprintf(buf, "**********ALERT******** Frame %d: this_mod->hDllInstance changed", intframe);
-          dumpmsg(buf);
+          dumpmsg("**********ALERT******** Frame %d: this_mod->hDllInstance changed", intframe);
 
           this_mod_hDllInstance = this_mod->hDllInstance;
       }
@@ -4664,9 +4651,7 @@ void FX_Apply_Mode(bool bLoadPreset, int iPresetNum)         // sets up DATA_X a
             end_pos = FXW*(FXH-FX_YCUT);
         }
 
-        //char buf[64];
-        //sprintf(buf, "endpos=%d", end_pos);
-        //dumpmsg(buf);
+        //dumpmsg("endpos=%d", end_pos);
 
         y = y_map_pos / FXW;
         x = y_map_pos % FXW;
@@ -5827,8 +5812,7 @@ BOOL doInit( HINSTANCE hInstance, int nCmdShow )
      */
 
     dumpmsg("directdrawcreate()...");
-    sprintf(buf, "  guid = %p", &g_DDrawDeviceGUID );
-    dumpmsg(buf);
+    dumpmsg("  guid = %p", &g_DDrawDeviceGUID);
 
     #if (GRFX==1)
       ddrval = DirectDrawCreate( &g_DDrawDeviceGUID, &lpDD, NULL );  //first param = GUID of adapter to use
@@ -5895,8 +5879,7 @@ BOOL doInit( HINSTANCE hInstance, int nCmdShow )
 
                   if (ddrval==DD_OK && VidMode >= 0)
                   {
-                    sprintf(buf, "WARNING: SetDisplayMode failed at %d x %d x %d...", FXW, FXH, iDispBits);
-                    dumpmsg(buf);
+                    dumpmsg("WARNING: SetDisplayMode failed at %d x %d x %d...", FXW, FXH, iDispBits);
 
                     SetWindowPos(hMainWnd, NULL, 0, 0, FXW, FXH, SWP_NOMOVE|SWP_NOZORDER);
 
@@ -5907,8 +5890,7 @@ BOOL doInit( HINSTANCE hInstance, int nCmdShow )
 
                     OnFxwFxhUpdated();
 
-                    sprintf(buf, "...trying again at nearest match: %d x %d x %d...", FXW, FXH, iDispBits);
-                    dumpmsg(buf);
+                    dumpmsg("...trying again at nearest match: %d x %d x %d...", FXW, FXH, iDispBits);
 
                     ddrval = lpDD->SetDisplayMode( FXW, FXH, iDispBits );
                   }
@@ -6523,9 +6505,7 @@ long FAR PASCAL WindowProc( HWND hWnd, UINT message,
         szMsg[0] = 0;
         PrintWindowsMessage(message, szMsg);
 
-        char buf[512]; 
-        sprintf(buf, "frame %d: %s, msg=0x%x, wParam=0x%x, lParam=0x%x", intframe, szMsg, message, wParam, lParam);
-        dumpmsg(buf);
+        dumpmsg("frame %d: %s, msg=0x%x, wParam=0x%x, lParam=0x%x", intframe, szMsg, message, wParam, lParam);
     }
     #endif
 
@@ -8073,9 +8053,7 @@ void GetWaveData()
 
         if (i < FXW/2)      // trigger.
         {
-            //char buf[64];
-            //sprintf(buf, "trigger: frame=%d, pos=%d", intframe, i);
-            //dumpmsg(buf);
+            //dumpmsg("trigger: frame=%d, pos=%d", intframe, i);
             int iShift = i;
             for (i=iShift; i<BUFSIZE; i++)
             {
@@ -8212,9 +8190,7 @@ void GetWaveData()
             }
 
             
-            char buf[99];
-            sprintf(buf, "blob_x[2] = %f, blob_str[2] = %f", blob_x[2], blob_str[2]);
-            dumpmsg(buf);
+            dumpmsg("blob_x[2] = %f, blob_str[2] = %f", blob_x[2], blob_str[2]);
             */
 
             // write matrix - sloppy
@@ -8394,9 +8370,7 @@ void RenderDots(unsigned char *VS1)
 
         vol = (high - low) / 256.0;
 
-        //char buf[64];
-        //sprintf(buf, "%f", vol);
-        //dumpmsg(buf);
+        //dumpmsg("%f", vol);
 
         // saver: low & high are around 10000-20000 (pos. or neg.)
         //        vol is around 80-120
@@ -8677,9 +8651,7 @@ void RenderWave(unsigned char *VS1)
     int fact = 2;//(FXW==320) ? 1 : 2;
     int base = 150;
     
-    //char buf[64];
-    //sprintf(buf, "%f", current_vol);
-    //dumpmsg(buf);
+    //dumpmsg("%f", current_vol);
 
     //base = (current_vol*4.5  + avg_vol * 0.45) - 10;
     #ifdef PLUGIN
@@ -9108,9 +9080,7 @@ void RenderWave(unsigned char *VS1)
     /*
     if ((intframe % 50)==0)
     {
-        char msg[64];
-        sprintf(msg, "sound: wave#/ready/active/empty = %d/%d/%d/%d", waveform, SoundReady, SoundActive, SoundEmpty);
-        dumpmsg(msg);
+        dumpmsg("sound: wave#/ready/active/empty = %d/%d/%d/%d", waveform, SoundReady, SoundActive, SoundEmpty);
     }
     */
     //EXPERIMENT
@@ -9125,9 +9095,7 @@ void RenderWave(unsigned char *VS1)
         /*
         if ((intframe % 50)==0)
         {
-            char msg[64];
-            sprintf(msg, "wave: r=%d g=%d b=%d", r, g, b);
-            dumpmsg(msg);
+            dumpmsg("wave: r=%d g=%d b=%d", r, g, b);
         }
         r = 100;
         g = 120;
@@ -9513,7 +9481,7 @@ void RenderWave(unsigned char *VS1)
 }
 
 
-void dumpmsg(char *s)
+void dumpmsg(const char *format, ...)
 {
     if (g_bDebugMode)
     {
@@ -9524,6 +9492,7 @@ void dumpmsg(char *s)
             if (infile)
             {
                 fprintf(infile, "[Geiss debug file]\n");
+                fflush(infile);
                 fclose(infile);
             }
         }
@@ -9532,7 +9501,11 @@ void dumpmsg(char *s)
         infile2 = fopen("c:\\g_debug.txt", "a");
         if (infile2)
         {
-            fprintf(infile2, "%s\n", s);
+            va_list args;
+            va_start(args, format);
+            vfprintf(infile2, format, args);
+            fprintf(infile2, "\n");
+            fflush(infile2);
             fclose(infile2);
         }
     }

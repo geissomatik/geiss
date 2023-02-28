@@ -265,9 +265,7 @@ void RenderDots(unsigned char *VS1)
 
         vol = (high - low) / 256.0;
 
-        //char buf[64];
-        //sprintf(buf, "%f", vol);
-        //dumpmsg(buf);
+        //dumpmsg("%f", vol);
 
         // saver: low & high are around 10000-20000 (pos. or neg.)
         //        vol is around 80-120
@@ -401,9 +399,7 @@ void RenderWave(unsigned char *VS1)
 	int fact = 2;//(FXW==320) ? 1 : 2;
     int base = 150;
     
-    //char buf[64];
-    //sprintf(buf, "%f", current_vol);
-    //dumpmsg(buf);
+    //dumpmsg("%f", current_vol);
 
     base = (current_vol*4  + avg_vol * 0.4) - 10;
     //base = (current_vol*4.5  + avg_vol * 0.45) - 10;
