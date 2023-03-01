@@ -58,7 +58,7 @@ UPDATING VERSION NUMBER:
 //    plugin:   
 //    saver:   dsound.lib  winmm.lib  LIBCMT.LIB 
 
-#define CURRENT_GEISS_VERSION 429
+#define CURRENT_GEISS_VERSION 430
 
 #ifndef PLUGIN
  #ifndef SAVER
