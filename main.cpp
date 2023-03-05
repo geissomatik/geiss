@@ -1145,7 +1145,7 @@ __declspec( dllimport ) void Apply_DLL_Mode();
     BOOL FX_Init();
     void FX_Fini();
     void FX_Pick_Random_Mode();  // sets global 'mode' to a valid random number.
-    void FX_Apply_Mode(bool bLoadPreset = false, int iPresetNum = 0);         // sets up DATA_X and other misc. stuff based on 'mode'
+    void GenerateChunkOfNewMap(bool bLoadPreset = false, int iPresetNum = 0);         // sets up DATA_X and other misc. stuff based on 'mode'
     void Solid_Line(float frame, unsigned char far *VS2);
     void Two_Chasers(float frame);
     void Put_Helpmsg_To_Backbuffer();
@@ -4244,7 +4244,7 @@ BOOL FX_Init()
 
 
     
-    dumpmsg("  Calling initial FX_Pick_Random_Mode() and FX_Apply_Mode() loop...");
+    dumpmsg("  Calling initial FX_Pick_Random_Mode() and GenerateChunkOfNewMap() loop...");
 
     //this is hanging:
     FX_Pick_Random_Mode();   // sets global 'mode' to a valid random number.
@@ -4252,7 +4252,7 @@ BOOL FX_Init()
     y_map_pos = -1;
     do
     {
-        FX_Apply_Mode();         // sets up DATA_X and other misc. stuff based on 'mode'
+        GenerateChunkOfNewMap();         // sets up DATA_X and other misc. stuff based on 'mode'
     }
     while (y_map_pos != -1);
 
@@ -4309,7 +4309,7 @@ void FX_Pick_Random_Mode()
 
 
 
-void FX_Apply_Mode(bool bLoadPreset, int iPresetNum)         // sets up DATA_X and other misc. stuff based on 'mode'
+void GenerateChunkOfNewMap(bool bLoadPreset, int iPresetNum)         // sets up DATA_X and other misc. stuff based on 'mode'
 {
     // to start a new map background-generating, call this function
     // with y_map_pos = FX_YCUT.
@@ -4321,7 +4321,7 @@ void FX_Apply_Mode(bool bLoadPreset, int iPresetNum)         // sets up DATA_X a
 
     if (y_map_pos < FX_YCUT*FXW || y_map_pos > (FXH-FX_YCUT)*FXW)
     {
-        dumpmsg("FATAL ERROR: FX_Apply_Mode(): received y_map_pos that was out of range");
+        dumpmsg("FATAL ERROR: GenerateChunkOfNewMap(): received y_map_pos that was out of range");
         exit(99);
     }
 
@@ -7023,7 +7023,7 @@ long FAR PASCAL WindowProc( HWND hWnd, UINT message,
                         new_mode = char_to_mode[wParam & 0xFF];
 
                         g_rush_map = true;          // rush it
-                        FX_Apply_Mode();
+                        GenerateChunkOfNewMap();
 
                         // reset fps counter:
                         time_array_pos = 0;
@@ -7361,14 +7361,14 @@ long FAR PASCAL WindowProc( HWND hWnd, UINT message,
                 case 'N':
                     // rush the map calculations:
                     g_rush_map = true;
-                    FX_Apply_Mode();
+                    GenerateChunkOfNewMap();
 
                     // reset fps counter:
                     time_array_pos = 0;
                     time_array_ready = false;
 
                     //FX_Pick_Random_Mode();
-                    //FX_Apply_Mode();
+                    //GenerateChunkOfNewMap();
                     //FX_Random_Palette();
                     break;
 
@@ -7570,7 +7570,7 @@ long FAR PASCAL WindowProc( HWND hWnd, UINT message,
                                 new_mode = iModeSelection;//char_to_mode[wParam & 0xFF];
 
                                 g_rush_map = true;          // rush it
-                                FX_Apply_Mode();
+                                GenerateChunkOfNewMap();
 
                                 // reset fps counter:
                                 time_array_pos = 0;
