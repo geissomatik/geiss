@@ -46,7 +46,7 @@ jobs:
     runs-on: windows-2022
     steps:
 
-    - uses: actions/checkout@v3.3.0
+    - uses: actions/checkout@v3.4.0
 
     - name: Configure build
       run: |-
