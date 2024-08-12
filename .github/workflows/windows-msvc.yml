@@ -70,21 +70,21 @@ jobs:
         mv bin_plugin/geiss4winamp_430.exe ./  # i.e. out of bin_plugin/
 
     - name: Upload screensaver binary
-      uses: actions/upload-artifact@89ef406dd8d7e03cfd12d9e0a4a378f454709029  # v4.3.5
+      uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a  # v4.3.6
       with:
         name: "geiss_saver_430_${{ github.sha }}"
         path: "bin_saver/*"
         if-no-files-found: error
 
     - name: Upload plug-in binary
-      uses: actions/upload-artifact@89ef406dd8d7e03cfd12d9e0a4a378f454709029  # v4.3.5
+      uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a  # v4.3.6
       with:
         name: "geiss4winamp_430_${{ github.sha }}"
         path: "bin_plugin/*"
         if-no-files-found: error
 
     - name: Upload plug-in installer
-      uses: actions/upload-artifact@89ef406dd8d7e03cfd12d9e0a4a378f454709029  # v4.3.5
+      uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a  # v4.3.6
       with:
         name: "geiss4winamp_430_installer_${{ github.sha }}"
         path: "geiss4winamp_430.exe"
