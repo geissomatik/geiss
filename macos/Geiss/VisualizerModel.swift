@@ -32,9 +32,11 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import AppKit
 import SwiftUI
 
 enum PreviewSource: String {
+    case system
     case tone
     case silence
 }
@@ -58,20 +60,57 @@ final class VisualizerModel: ObservableObject {
             bridge.setSensitivity(Float(clamped))
         }
     }
-    @Published var preview: PreviewSource = .tone
+    @Published var preview: PreviewSource = .system
+    @Published var capture: CaptureStatus = .starting
 
     private let bridge = GeissBridge(seed: 1)
+    private let tap = SystemAudioTap()
     private var lastDate: Date?
+    private var lastSequence: UInt64 = 0
+    private var lastCaptureDate: Date?
     private var simWidth = 0
     private var simHeight = 0
     private var silenceBuffer: [Float] = []
 
     private static let sensitivityKey = "sensitivity"
 
+    var sourceLabel: String {
+        switch preview {
+        case .tone:
+            return "TONE"
+        case .silence:
+            return "QUIET"
+        case .system:
+            if case .running = capture {
+                return "LIVE"
+            }
+            return "WAIT"
+        }
+    }
+
     private init() {
         let stored = UserDefaults.standard.object(forKey: Self.sensitivityKey) as? Double ?? 1
         sensitivity = min(4, max(0.25, stored))
         bridge.setSensitivity(Float(sensitivity))
+        tap.onStatus = { [weak self] status in
+            Task { @MainActor in
+                self?.capture = status
+            }
+        }
+        tap.activate()
+    }
+
+    func openCaptureSettings() {
+        let candidates = [
+            "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_AudioCapture",
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_AudioCapture"
+        ]
+        for candidate in candidates {
+            guard let url = URL(string: candidate) else { continue }
+            if NSWorkspace.shared.open(url) {
+                return
+            }
+        }
     }
 
     func togglePaused() {
@@ -98,7 +137,8 @@ final class VisualizerModel: ObservableObject {
 
         let dt = cappedDelta(to: date)
         let time = date.timeIntervalSinceReferenceDate
-        if preview == .tone {
+        switch preview {
+        case .tone:
             let samples = PreviewTone.samples(at: time, duration: dt)
             samples.withUnsafeBufferPointer { buffer in
                 bridge.ingestInterleaved(
@@ -109,20 +149,10 @@ final class VisualizerModel: ObservableObject {
                     time: time
                 )
             }
-        } else {
-            let frames = max(1, Int(PreviewTone.sampleRate * dt))
-            if silenceBuffer.count != frames * 2 {
-                silenceBuffer = [Float](repeating: 0, count: frames * 2)
-            }
-            silenceBuffer.withUnsafeBufferPointer { buffer in
-                bridge.ingestInterleaved(
-                    buffer.baseAddress,
-                    frameCount: Int32(frames),
-                    channels: 2,
-                    sampleRate: PreviewTone.sampleRate,
-                    time: time
-                )
-            }
+        case .silence:
+            ingestSilence(dt: dt, time: time)
+        case .system:
+            ingestSystem(dt: dt, time: time)
         }
 
         var width: Int32 = 0
@@ -138,6 +168,49 @@ final class VisualizerModel: ObservableObject {
             max(2, Int((viewSize.width * scale).rounded())),
             max(2, Int((viewSize.height * scale).rounded()))
         )
+    }
+
+    private func ingestSystem(dt: Double, time: Double) {
+        let running: Bool
+        if case .running = capture {
+            running = true
+        } else {
+            running = false
+        }
+        if running, let snap = tap.latest(), snap.sequence != lastSequence {
+            lastSequence = snap.sequence
+            lastCaptureDate = Date()
+            snap.samples.withUnsafeBufferPointer { buffer in
+                bridge.ingestInterleaved(
+                    buffer.baseAddress,
+                    frameCount: Int32(snap.frames),
+                    channels: 2,
+                    sampleRate: snap.sampleRate,
+                    time: time
+                )
+            }
+            return
+        }
+        let age = lastCaptureDate.map { Date().timeIntervalSince($0) } ?? 1
+        if !running || age > 0.2 {
+            ingestSilence(dt: dt, time: time)
+        }
+    }
+
+    private func ingestSilence(dt: Double, time: Double) {
+        let frames = max(1, Int(PreviewTone.sampleRate * dt))
+        if silenceBuffer.count != frames * 2 {
+            silenceBuffer = [Float](repeating: 0, count: frames * 2)
+        }
+        silenceBuffer.withUnsafeBufferPointer { buffer in
+            bridge.ingestInterleaved(
+                buffer.baseAddress,
+                frameCount: Int32(frames),
+                channels: 2,
+                sampleRate: PreviewTone.sampleRate,
+                time: time
+            )
+        }
     }
 
     private func cappedDelta(to date: Date) -> Double {

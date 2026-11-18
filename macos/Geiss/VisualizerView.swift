@@ -46,6 +46,11 @@ struct VisualizerView: View {
             ZStack(alignment: .bottom) {
                 MetalScreen(presenter: model.presenter)
                     .ignoresSafeArea()
+                if case .failed(let status) = model.capture, model.preview == .system {
+                    captureOverlay(status: status)
+                        .padding(.top, 28)
+                        .frame(maxHeight: .infinity, alignment: .top)
+                }
                 controlBar
                     .padding(.horizontal, 18)
                     .padding(.bottom, 16)
@@ -103,7 +108,7 @@ struct VisualizerView: View {
 
     private var controlBar: some View {
         HStack(spacing: 14) {
-            Text(model.preview == .tone ? "TONE" : "QUIET")
+            Text(model.sourceLabel)
                 .foregroundStyle(amber)
             Text("SENS")
             Slider(value: $model.sensitivity, in: 0.25...4)
@@ -118,6 +123,27 @@ struct VisualizerView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 9)
         .background(Color.black.opacity(0.62))
+        .overlay(alignment: .top) {
+            Rectangle().fill(amber.opacity(0.9)).frame(height: 1)
+        }
+    }
+
+    private func captureOverlay(status: OSStatus) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Geiss cannot hear this Mac.")
+            Text(SystemAudioTap.statusText(status))
+                .foregroundStyle(amber)
+            Button("Open System Settings", action: model.openCaptureSettings)
+                .buttonStyle(.plain)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .contentShape(Rectangle())
+        }
+        .font(.system(size: 12, weight: .medium, design: .monospaced))
+        .foregroundStyle(.white.opacity(0.88))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Color.black.opacity(0.72))
         .overlay(alignment: .top) {
             Rectangle().fill(amber.opacity(0.9)).frame(height: 1)
         }
@@ -149,7 +175,7 @@ private struct AboutView: View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Geiss")
                 .font(.system(size: 28, weight: .semibold, design: .monospaced))
-            Text("A sound-reactive picture. This window plays a generated tone until it can hear the Mac.")
+            Text("A sound-reactive picture. It follows the sound coming out of this Mac.")
                 .fixedSize(horizontal: false, vertical: true)
             Text("Copyright © 1998-2022 Ryan Geiss. Licensed under the 3-Clause BSD License. The copyright notice and license terms ship with the source.")
                 .font(.callout)
