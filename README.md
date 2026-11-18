@@ -13,6 +13,8 @@ for general information about Geiss please see:
 - [Geiss @ WinampHeritage.com](https://winampheritage.com/visualizations/geiss)
 - [Geisswerks — home page of Ryan M. Geiss](https://www.geisswerks.com/)
 
+A macOS picture prototype lives in [`macos/`](macos/README.md). The product brief is [`docs/spec/macos-port.md`](docs/spec/macos-port.md).
+
 For a YouTube video showing Geiss in action, please click:
 
 [![Video "Windows 95 + Winamp + Geiss = Aesthetic"](https://img.youtube.com/vi/MfFcRsUZCxw/hqdefault.jpg)](https://youtu.be/MfFcRsUZCxw?t=15)
