@@ -20,9 +20,9 @@ For a YouTube video showing Geiss in action, please click:
 
 # macOS app
 
-[`macos/`](macos/README.md) is a standalone window for Apple Silicon, on macOS 14.2 or later. It draws one Geiss zoom and one waveform, and the line follows the sound coming out of the Mac.
+[`macos/`](macos/README.md) is a standalone window for Apple Silicon, on macOS 14.2 or later. It draws a few Geiss maps and waveforms, and the picture follows the sound coming out of the Mac.
 
-- The zoom is map mode 25. The line is waveform 1. The colors are one cycling palette. The picture changes about every 20 seconds.
+- The looks are a horizontal tunnel, a vortex, a fast swirl, and a smooth zoom, with one line, two lines, or an X-Y oscilloscope. The colors are one cycling palette. The picture changes about every 20 seconds.
 - Sensitivity is remembered. Pause, lock, and next visual are the other controls.
 - Visual > Tone plays a steady note. Visual > Silence lets the line fade. Otherwise the window listens to the Mac's output.
 - The picture engine is portable C++ in [`engine/`](engine). Metal displays it. The Windows screensaver and plug-in sources stay on their own build.

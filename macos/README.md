@@ -1,4 +1,4 @@
-A window that draws one Geiss zoom and one waveform on Apple Silicon. It listens to the sound coming out of this Mac.
+A window that draws a few Geiss maps and waveforms on Apple Silicon. It listens to the sound coming out of this Mac.
 
 [![macOS](https://img.shields.io/badge/macOS-14.2%2B-black)](https://developer.apple.com/documentation/macos-release-notes)
 [![architecture](https://img.shields.io/badge/architecture-Apple%20Silicon-black)](https://developer.apple.com/documentation/apple-silicon)
@@ -27,7 +27,7 @@ open /tmp/geiss-dd/Build/Products/Debug/Geiss.app
 
 ## What you see
 
-The window opens at 1280×720 and asks to record system audio. The picture is a smooth zoom of the previous frame, with one line across the middle. The line follows the Mac's output. Quiet output leaves the picture calm. Visual > Tone plays a steady note. Visual > Silence fades the line. Pause freezes the picture. Lock holds the zoom and the color. Next visual picks another zoom. The controls hide after a few seconds and return when the pointer moves.
+The window opens at 1280×720 and asks to record system audio. The picture starts as a smooth zoom with one line across the middle. About every 20 seconds, and whenever you press Next, it picks another look: a horizontal tunnel, a vortex, a fast swirl, or the zoom, with one line, two lines, or an X-Y oscilloscope. The fast swirl is drawn with one line or two. The waveform follows the Mac's output. Quiet output leaves the picture calm. Visual > Tone plays a steady note. Visual > Silence fades the waveform. Pause freezes the picture. Lock holds the current look and the color. The controls hide after a few seconds and return when the pointer moves.
 
 The bar reads LIVE while the tap is running, WAIT while it is starting or blocked, TONE for the generated note, and QUIET for silence. Sensitivity is remembered. Pause and lock are not.
 
@@ -40,7 +40,7 @@ Copyright (c) 1998-2022 Ryan Geiss. The picture engine and this app are licensed
 | What you see | What to do |
 |---|---|
 | The window stays black | Wait a moment, or press Resume if the picture is paused. |
-| The line does not move | The Mac is quiet, or Visual > Silence is selected. Play some sound, or choose Visual > Tone. |
+| The waveform does not move | The Mac is quiet, or Visual > Silence is selected. Play some sound, or choose Visual > Tone. |
 | Geiss cannot hear this Mac | Choose Open System Settings and allow Geiss under System Audio Recording. Return to the window. A local rebuild can ask again. |
 | Playback stops while Geiss is open | Quit Geiss. The tap is meant to leave playback running. |
 | `xcodebuild` cannot find Metal | Build on an Apple Silicon Mac with Xcode, for the `arm64` destination above. |

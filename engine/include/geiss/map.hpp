@@ -39,11 +39,14 @@
 
 namespace geiss {
 
-// Mode 25 parameters. Centers are fractions of the frame so a resize keeps the zoom.
+// One Geiss map. Centers are fractions of the frame so a resize keeps the look.
+// `mode` is the GenerateChunkOfNewMap number: 17, 19, 24, or 25.
 struct MapParameters {
+    int mode = 25;
     float centerXNorm = 0.5f;
     float centerYNorm = 0.5f;
     float turn = 0;
+    // Mode 25 only. The source uses the constant 3. A new zoom picks about 2...6.
     float zoom = 3;
 };
 
@@ -52,11 +55,20 @@ struct SourcePoint {
     float y = 0;
 };
 
-// Full-step source for GenerateChunkOfNewMap mode 25:
-//   scale = zoom / (zoom + length(offset * 2 / width))
-//   source = center + rotate(offset) * scale
-// `zoom` is the constant 3 in the original, varied across 2...6 for a new visual.
+// Full-step source for one pixel of GenerateChunkOfNewMap.
+// nx and ny are (pixel - center) * 2 / width. The source is
+// center + rotate(nx, ny) * scale * width / 2.
+//   Mode 17: scale = 0.97 - ny*ny*0.40. Horizontal tunnel.
+//   Mode 19: scale = 1.04 - 0.25 * length(nx, ny). Vortex.
+//   Mode 24: scale = 0.96 and turn = 0.05. The pixel loop replaces the shared turn.
+//   Mode 25: scale = zoom / (zoom + length(nx, ny)).
+// Any other mode uses the mode 25 formula.
+SourcePoint mapSource(int x, int y, int width, int height, const MapParameters& map);
+
+// Mode 25 only. Kept so the zoom formula can be checked on its own.
 SourcePoint mode25Source(int x, int y, int width, int height, const MapParameters& map);
+
+void buildMap(std::vector<SourcePoint>& out, int width, int height, const MapParameters& map);
 
 void buildMode25Map(std::vector<SourcePoint>& out, int width, int height, const MapParameters& map);
 

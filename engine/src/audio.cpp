@@ -51,22 +51,65 @@ float downmix(const float* frame, int channels) {
     return 0.5f * (frame[0] + frame[1]);
 }
 
-// Rotate so the first rising zero crossing sits at column 0.
-// Intentional difference from GetWaveData: one rising edge, no slope match across frames.
-void alignRisingEdge(std::vector<float>& samples) {
-    const int n = static_cast<int>(samples.size());
-    if (n < 2) {
+std::vector<float> channel(const PcmBlock& block, int which, float gain) {
+    std::vector<float> out(static_cast<std::size_t>(block.frameCount));
+    for (int i = 0; i < block.frameCount; ++i) {
+        const float* sample = block.samples + static_cast<std::size_t>(i * block.channels);
+        float value = sample[0];
+        if (which < 0) {
+            value = downmix(sample, block.channels);
+        } else if (which == 1 && block.channels > 1) {
+            value = sample[1];
+        }
+        out[static_cast<std::size_t>(i)] = value * gain;
+    }
+    return out;
+}
+
+void resample(const std::vector<float>& source, std::vector<float>& dest) {
+    const int columns = static_cast<int>(dest.size());
+    if (source.empty() || columns < 1) {
         return;
     }
-    int rising = -1;
+    if (columns == 1 || source.size() == 1) {
+        const float value = source.size() == 1 ? source[0] : source[source.size() / 2];
+        std::fill(dest.begin(), dest.end(), value);
+        return;
+    }
+    const float span = static_cast<float>(source.size() - 1);
+    const float denom = static_cast<float>(columns - 1);
+    for (int i = 0; i < columns; ++i) {
+        const float pos = span * (static_cast<float>(i) / denom);
+        const int i0 = static_cast<int>(pos);
+        const int i1 = std::min(i0 + 1, static_cast<int>(source.size()) - 1);
+        const float fraction = pos - static_cast<float>(i0);
+        const float a = source[static_cast<std::size_t>(i0)];
+        const float b = source[static_cast<std::size_t>(i1)];
+        dest[static_cast<std::size_t>(i)] = a * (1.f - fraction) + b * fraction;
+    }
+}
+
+// Rotate so the first rising zero crossing sits at column 0.
+// Intentional difference from GetWaveData: one rising edge, no slope match across frames.
+// Left and right take the same rotation so a stereo pair stays together.
+int risingColumn(const std::vector<float>& samples) {
+    const int n = static_cast<int>(samples.size());
+    if (n < 2) {
+        return 0;
+    }
     for (int i = 0; i < n; ++i) {
         const float a = samples[static_cast<std::size_t>(i)];
         const float b = samples[static_cast<std::size_t>((i + 1) % n)];
         if (a <= 0.f && b > 0.f) {
-            rising = i + 1;
-            break;
+            const int rising = i + 1;
+            return rising >= n ? 0 : rising;
         }
     }
+    return 0;
+}
+
+void rotateFrom(std::vector<float>& samples, int rising) {
+    const int n = static_cast<int>(samples.size());
     if (rising <= 0 || rising >= n) {
         return;
     }
@@ -87,12 +130,17 @@ AudioFrame Analyzer::analyze(const PcmBlock& block, int columns, float gain) {
     }
 
     std::vector<float> mono;
+    std::vector<float> left;
+    std::vector<float> right;
     const bool hasAudio = block.samples != nullptr && block.frameCount > 0 && block.channels > 0;
     if (hasAudio) {
-        mono.resize(static_cast<std::size_t>(block.frameCount));
-        for (int i = 0; i < block.frameCount; ++i) {
-            const float* sample = block.samples + static_cast<std::size_t>(i * block.channels);
-            mono[static_cast<std::size_t>(i)] = downmix(sample, block.channels) * gain;
+        mono = channel(block, -1, gain);
+        if (block.channels == 1) {
+            left = mono;
+            right = mono;
+        } else {
+            left = channel(block, 0, gain);
+            right = channel(block, 1, gain);
         }
     }
 
@@ -106,24 +154,16 @@ AudioFrame Analyzer::analyze(const PcmBlock& block, int columns, float gain) {
     frame.peak = peak;
 
     frame.samples.assign(static_cast<std::size_t>(columns), 0.f);
+    frame.left.assign(static_cast<std::size_t>(columns), 0.f);
+    frame.right.assign(static_cast<std::size_t>(columns), 0.f);
     if (!mono.empty()) {
-        if (columns == 1 || mono.size() == 1) {
-            const float value = mono.size() == 1 ? mono[0] : mono[mono.size() / 2];
-            std::fill(frame.samples.begin(), frame.samples.end(), value);
-        } else {
-            const float span = static_cast<float>(mono.size() - 1);
-            const float denom = static_cast<float>(columns - 1);
-            for (int i = 0; i < columns; ++i) {
-                const float pos = span * (static_cast<float>(i) / denom);
-                const int i0 = static_cast<int>(pos);
-                const int i1 = std::min(i0 + 1, static_cast<int>(mono.size()) - 1);
-                const float fraction = pos - static_cast<float>(i0);
-                const float a = mono[static_cast<std::size_t>(i0)];
-                const float b = mono[static_cast<std::size_t>(i1)];
-                frame.samples[static_cast<std::size_t>(i)] = a * (1.f - fraction) + b * fraction;
-            }
-        }
-        alignRisingEdge(frame.samples);
+        resample(mono, frame.samples);
+        resample(left, frame.left);
+        resample(right, frame.right);
+        const int rising = risingColumn(frame.samples);
+        rotateFrom(frame.samples, rising);
+        rotateFrom(frame.left, rising);
+        rotateFrom(frame.right, rising);
     }
 
     double duration = 0;

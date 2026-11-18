@@ -47,10 +47,14 @@ struct PcmBlock {
     double time = 0;
 };
 
-// What the renderer is allowed to see. Samples are one mono value per column.
+// What the renderer is allowed to see.
+// `samples`, `left`, and `right` each hold one value per column, about −1…1.
+// A one-channel block copies that channel into both sides.
 struct AudioFrame {
     double time = 0;
     std::vector<float> samples;
+    std::vector<float> left;
+    std::vector<float> right;
     float level = 0;
     float peak = 0;
     bool beat = false;
@@ -59,6 +63,7 @@ struct AudioFrame {
 
 // Turns PCM into an AudioFrame. The beat flag stays false until a later port.
 // Follows the level-trigger idea in GetWaveData with a simpler rising-edge rotate.
+// The same rotation is applied to the mono, left, and right columns.
 class Analyzer {
 public:
     AudioFrame analyze(const PcmBlock& block, int columns, float gain);
