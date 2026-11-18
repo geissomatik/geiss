@@ -78,6 +78,7 @@ The first build proves the architecture with a small slice:
 - Waveform 1, one smoothed line across the frame.
 - A complete map is built when a visual starts. Another is built about every 20 seconds unless the visual is locked. Next builds one immediately. Pause freezes that timer. Chunked background generation waits.
 - The index buffer and hue-cycle palette described above, scaled by Metal.
+- Until the system-audio tap exists, the window plays a generated tone or silence.
 
 ## Project layout and code policy
 
