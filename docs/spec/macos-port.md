@@ -8,7 +8,7 @@ Build a modernized Geiss visualizer for Apple Silicon Macs. Preserve the recogni
 
 - Start as a standalone macOS app.
 - Keep the visualization engine as a library with no SwiftUI and no permission code, so a future screen saver can be another host. The app owns audio capture. This prototype does not design the screen saver's permission model.
-- On launch, open the visualizer immediately in a normal window on the main display. The picture fills that window. Standard macOS fullscreen is available. There is no separate start action.
+- On launch, open the visualizer immediately in a normal window on the main display. The picture fills that window. The window opens at 1280×720, is resizable, and has a minimum size of 640×360. Fullscreen uses the system fullscreen control. There is no separate start action.
 - Multi-display support can be considered later.
 - No music playback controls are needed.
 
@@ -18,7 +18,7 @@ Build a modernized Geiss visualizer for Apple Silicon Macs. Preserve the recogni
 - Use macOS 14.2 as the initial minimum deployment target because Core Audio taps are available from macOS 14.2.
 - Raise the minimum version if required by the chosen rendering or other APIs.
 - No fallback support for older macOS versions is required.
-- The app is not sandboxed. Local distribution does not require the App Sandbox.
+- The app is not sandboxed. Local builds use automatic signing. The bundle identifier is `com.janrothen.geiss`.
 
 ## Language and module boundaries
 
@@ -27,7 +27,7 @@ Build a modernized Geiss visualizer for Apple Silicon Macs. Preserve the recogni
 - SwiftUI provides the window, overlay, and menus.
 - Metal presents the frame.
 - One Objective-C++ bridge is the only place that includes both Cocoa and the engine headers. Swift does not include C++ headers.
-- The engine returns an RGBA8 buffer. Swift creates the Metal texture and uploads it. Metal scales that texture into the window.
+- The simulation buffer stores 8-bit palette indices. Warp, darkening, and the waveform write those indices. The engine expands a 256-color palette to an RGBA8 buffer at the boundary. Swift creates the Metal texture and uploads it. Metal scales that texture into the window.
 
 ## Audio behavior
 
@@ -39,12 +39,17 @@ Build a modernized Geiss visualizer for Apple Silicon Macs. Preserve the recogni
   - Analysis, in portable C++, turns that PCM into one immutable frame: samples, level, peak, beat, silence, and time.
   - The renderer reads only that frame.
 - A stalled consumer keeps the latest frame and drops older audio.
+- The frame carries one mono sample per simulation column, resampled from the tap rate into about −1…1. Level is the RMS of the captured block. Silence means that level has stayed low for about half a second. A simple rising-edge alignment holds the waveform in place.
+- The engine runs on the main thread. The capture callback only copies samples.
+- Waveform brightness follows level and sensitivity. The full beat detector waits. The frame may still include a beat flag for later use.
 - The exact OS signal for a denied tap is confirmed during the prototype and recorded here.
 
 ## Rendering
 
 - Preserve the existing visualization algorithms and their visual intent in portable C++ where practical.
 - In the first version, Metal uploads the RGBA8 buffer and scales it. A GPU warp can be considered later if CPU cost calls for it.
+- Each tick warps the previous index buffer through the current map, darkens it, draws the waveform, and then expands the palette to RGBA8.
+- The prototype palette is one 256-color hue cycle. Its phase turns with time. Audio-linked palettes wait. That difference is noted beside the ported code.
 - Presentation follows the display. Simulation time is elapsed seconds. A large gap after sleep or wake is capped so the picture does not jump.
 - Simulation resolution is independent of the display. The longest side is capped at 960, and the aspect ratio follows the window.
 
@@ -53,7 +58,7 @@ Build a modernized Geiss visualizer for Apple Silicon Macs. Preserve the recogni
 - Visual direction: modernized interpretation. Keep recognizable Geiss elements — procedural maps, waveforms, rich colors, and evolving layers — while refining rendering, motion, and visual balance.
 - Visuals evolve automatically.
 - The first control set is:
-  - **Sensitivity.** Scales the analyzed audio level. This value persists.
+  - **Sensitivity.** A linear gain on the analyzed level. The default is 1.0, and the value persists. Tune the default once real tap levels are visible.
   - **Pause.** Freezes the picture. This state does not persist.
   - **Lock.** Keeps audio motion and holds the current map, waveform, and palette. This state does not persist.
   - **Next visual.**
@@ -69,18 +74,18 @@ Build a modernized Geiss visualizer for Apple Silicon Macs. Preserve the recogni
 
 The first build proves the architecture with a small slice:
 
-- One map mode from the original tunnel or zoom family in `GenerateChunkOfNewMap`.
-- One waveform.
-- One cycling palette.
-- The CPU buffer described above, scaled by Metal.
-- Next visual randomizes that mode's parameters until more modes exist.
+- Map mode 25, the smooth 1/r zoom in `GenerateChunkOfNewMap`.
+- Waveform 1, one smoothed line across the frame.
+- A complete map is built when a visual starts. Another is built about every 20 seconds unless the visual is locked. Next builds one immediately. Pause freezes that timer. Chunked background generation waits.
+- The index buffer and hue-cycle palette described above, scaled by Metal.
 
 ## Project layout and code policy
 
 - `engine/` holds the portable C++.
 - `macos/` holds the Xcode app and the Objective-C++ bridge.
 - The root `CMakeLists.txt` remains the Windows build and does not gain a macOS target.
-- Once the project exists, build the app with `xcodebuild`. Test analysis and map math with a small C++ test target.
+- Once the project exists, build the app with `xcodebuild`. Test analysis and map math with a small C++ executable that uses assertions. The Xcode project is checked in.
+- Ported algorithm files keep the Geiss copyright and 3-Clause BSD notice. The SwiftUI shell is separate new code.
 - Add unit tests for portable visualization and audio-analysis logic. Check system permission behavior and live rendering manually. Add an automated test when a behavior is stable and testable. Screenshot comparison is not the quality gate.
 - Use the existing C++ style only inside preserved legacy files. Use current Swift conventions for new app code. New C++ is a modern portable subset.
 - Keep platform APIs at the edges: capture, the bridge, and SwiftUI.
@@ -105,8 +110,8 @@ The Windows project has a substantial set of rendering behaviors and options. So
 
 ### Visual identity and animation
 
-- **Procedural evolving backgrounds/maps:** Geiss creates a new visual map in chunks while the current one is displayed, then transitions to the new map. This evolving, fluid look is central to the identity. Preserve the evolving procedural structure, and modernize the rendering implementation and transition quality.
-- **Waveforms:** The project cycles through several waveform styles, including an X-Y oscilloscope mode. Wave shape and amplitude react to the audio. Preserve the recognizable waveform family and audio response. Review individual styles during the visual inventory. The prototype ports one style.
+- **Procedural evolving backgrounds/maps:** Geiss creates a new visual map in chunks while the current one is displayed, then transitions to the new map. This evolving, fluid look is central to the identity. Preserve the feedback warp and automatic change of maps. The first build generates each map completely when the visual changes. Preparing the next map in slices waits.
+- **Waveforms:** The project cycles through several waveform styles, including an X-Y oscilloscope mode. Wave shape and amplitude react to the audio. Preserve the recognizable waveform family and audio response. The prototype uses waveform 1, one smoothed line across the frame.
 - **Layered effects:** The renderer has optional effects such as chasers, bars, dots, solar-like overlays, grids, nuclide patterns, and shading. Some are selected or varied as part of modes. Preserve the signature effects and their combinations after assessing each for visual quality and cost on modern displays. The prototype leaves these for a later slice.
 - **Automatic variation:** Modes, waveforms, palettes, and effects can change over time. Preserve automatic variety. Pause, lock, and next visual are the first-version controls for that behavior.
 
@@ -133,8 +138,8 @@ The Windows project has a substantial set of rendering behaviors and options. So
 - Visual fidelity: modernized interpretation, preserving recognizable Geiss elements while refining presentation.
 - Automatic variation: visuals evolve on their own. Pause freezes the picture. Lock holds the current map, waveform, and palette while audio motion continues. Next visual advances the look.
 - Initial controls: sensitivity, pause, lock, and next visual.
-- Pixels: portable C++ writes an RGBA8 frame. Metal uploads and scales it.
-- First slice: one tunnel or zoom map mode, one waveform, and one cycling palette.
+- Pixels: portable C++ simulates 8-bit palette indices, then expands them to RGBA8. Metal uploads and scales that buffer.
+- First slice: map mode 25 (smooth 1/r zoom), waveform 1 (one centered line), and one hue-cycle palette. Each frame feeds back through the map. A new map is built about every 20 seconds unless locked.
 - Launch: the visualizer opens immediately. Denied or failed capture keeps calm motion and shows an overlay that opens System Settings.
 
 ### Choices considered

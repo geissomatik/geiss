@@ -20,7 +20,7 @@ Treat [`docs/spec/macos-port.md`](docs/spec/macos-port.md) as the current produc
 
 ## Porting guidance
 
-- Preserve the existing visualization algorithms and their intent where practical, in new portable C++. The first renderer writes an RGBA8 buffer; Metal uploads and scales it. Treat the DirectDraw and software-pixel path, including the x86 assembly warp, as an implementation detail to replace. Keep that engine independent of the app shell for possible future screen saver reuse. The legacy Windows sources stay out of the macOS build.
+- Preserve the existing visualization algorithms and their intent where practical, in new portable C++. The first simulation buffer is 8-bit palette indices; the engine expands a palette to RGBA8 and Metal uploads that. The first formulas are map mode 25 and waveform 1. Each frame feeds the previous frame back through the map. A new map is built about every 20 seconds unless locked. Treat the DirectDraw and software-pixel path, including the x86 assembly warp, as an implementation detail to replace. Keep that engine independent of the app shell for possible future screen saver reuse. The legacy Windows sources stay out of the macOS build.
 - SwiftUI owns the window and controls. A small Objective-C++ bridge is the only file that includes both Cocoa and the engine.
 - Replace Windows-specific platform, audio, and UI layers with suitable macOS components.
 - Do not carry over Winamp integration, CD playback/control, Windows mixer/device selection, DirectDraw display-mode controls, or other Windows-only compatibility behavior into the macOS product.
