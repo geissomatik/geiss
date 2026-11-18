@@ -39,7 +39,7 @@ Build a modernized Geiss visualizer for Apple Silicon Macs. Preserve the recogni
   - Analysis, in portable C++, turns that PCM into one immutable frame: samples, level, peak, beat, silence, and time.
   - The renderer reads only that frame.
 - A stalled consumer keeps the latest frame and drops older audio.
-- The frame carries one mono sample per simulation column, resampled from the tap rate into about −1…1. Level is the RMS of the captured block. Silence means that level has stayed low for about half a second. A simple rising-edge alignment holds the waveform in place.
+- The frame carries one mono sample per simulation column, and a left and a right sample on that same grid, resampled from the tap rate into about −1…1. A one-channel block copies its sample into both sides. Level is the RMS of the mono samples. Silence means that level has stayed low for about half a second. One rising-edge alignment rotates the mono, left, and right columns together so the waveform holds in place.
 - The engine runs on the main thread. The capture callback only copies samples.
 - Waveform brightness follows level and sensitivity. The full beat detector waits. The frame may still include a beat flag for later use.
 - The exact OS signal for a denied tap is confirmed during the prototype and recorded here.
@@ -72,13 +72,28 @@ Build a modernized Geiss visualizer for Apple Silicon Macs. Preserve the recogni
 
 ## Prototype milestone
 
-The first build proves the architecture with a small slice:
+The picture is a small set of Geiss maps and waveforms. The warp is unchanged: each frame samples the previous index buffer through the map, darkens it, and draws the waveform.
 
-- Map mode 25, the smooth 1/r zoom in `GenerateChunkOfNewMap`.
-- Waveform 1, one smoothed line across the frame.
-- A complete map is built when a visual starts. Another is built about every 20 seconds unless the visual is locked. Next builds one immediately. Pause freezes that timer. Chunked background generation waits.
-- The index buffer and hue-cycle palette described above, scaled by Metal.
-- The window listens to the default output mix. Visual > Tone and Visual > Silence override that source. The tap keeps running during an override.
+Maps, from `GenerateChunkOfNewMap`. `nx` and `ny` are the pixel offset from the map center, times `2 / width`. The source point is the center plus that offset, rotated, scaled, and multiplied by half the width.
+
+- Mode 17, a horizontal tunnel. Scale is `0.97 - ny² * 0.40`.
+- Mode 19, a vortex. Scale is `1.04 - 0.25 * length(nx, ny)`.
+- Mode 24, a fast swirl. Scale is `0.96` and the turn is `0.05`. That turn replaces the shared turn.
+- Mode 25, the smooth 1/r zoom. A new zoom still picks its constant from about 2…6.
+
+Center and the shared turn still vary for modes 17, 19, and 25. The per-pixel constants above stay as written in the source.
+
+Waveforms, from `RenderWave`:
+
+- Waveform 1, one smoothed line. It reads the mono columns and stays on the frame center.
+- Waveform 2, two smoothed lines. The left line sits 12% of the height above the map center and the right line sits 12% below. Both use 0.7 of the line amplitude.
+- Waveform 6, the X-Y oscilloscope. It plots 314 smoothed stereo points around the map center, spread across the columns, at 1.2 of the line amplitude, rocked by `sin(t * 0.3)`. The original walks the first 314 frames of its capture buffer. Those frames are already one sample per column here, so the points cover that wave.
+
+A −1…1 sample still covers about 35% of the height before those waveform scales. Mode 24 is not paired with waveform 6, matching the original rejection of that pair. A new pair is chosen uniformly from the other valid pairs.
+
+The window opens on mode 25 and waveform 1. Another pair is chosen about every 20 seconds unless the visual is locked. Next chooses one immediately. Pause freezes the picture and that timer. The oscilloscope rock advances while the picture is moving, including while locked, and holds while paused. Chunked background generation waits.
+
+The index buffer and hue-cycle palette are unchanged. The window listens to the default output mix. Visual > Tone and Visual > Silence override that source. The tap keeps running during an override.
 
 ## Project layout and code policy
 
@@ -112,7 +127,7 @@ The Windows project has a substantial set of rendering behaviors and options. So
 ### Visual identity and animation
 
 - **Procedural evolving backgrounds/maps:** Geiss creates a new visual map in chunks while the current one is displayed, then transitions to the new map. This evolving, fluid look is central to the identity. Preserve the feedback warp and automatic change of maps. The first build generates each map completely when the visual changes. Preparing the next map in slices waits.
-- **Waveforms:** The project cycles through several waveform styles, including an X-Y oscilloscope mode. Wave shape and amplitude react to the audio. Preserve the recognizable waveform family and audio response. The prototype uses waveform 1, one smoothed line across the frame.
+- **Waveforms:** The project cycles through several waveform styles, including an X-Y oscilloscope mode. Wave shape and amplitude react to the audio. Preserve the recognizable waveform family and audio response. The current picture uses waveform 1 (one smoothed line), waveform 2 (two smoothed lines), and waveform 6 (the X-Y oscilloscope). The other waveforms wait.
 - **Layered effects:** The renderer has optional effects such as chasers, bars, dots, solar-like overlays, grids, nuclide patterns, and shading. Some are selected or varied as part of modes. Preserve the signature effects and their combinations after assessing each for visual quality and cost on modern displays. The prototype leaves these for a later slice.
 - **Automatic variation:** Modes, waveforms, palettes, and effects can change over time. Preserve automatic variety. Pause, lock, and next visual are the first-version controls for that behavior.
 
@@ -121,7 +136,7 @@ The Windows project has a substantial set of rendering behaviors and options. So
 - **Vertical visual size / letterboxing:** percentage of display height occupied by the visual. Deferred. The first version is full-bleed.
 - **Wave scaling:** default audio waveform amplitude. This is the first-version sensitivity control.
 - **Color behavior:** palette generation, gamma, coarse and solar palette frequency, and optional sound-synchronized color. The 8-bit palette-specific controls reflect old color modes. The prototype uses one cycling palette. Palette variety and optional audio-linked color remain later work.
-- **Beat detection:** controls beat-responsive behavior. Analysis may still produce a beat flag. A user-facing beat control waits.
+- **Beat detection:** controls beat-responsive behavior. Analysis may still produce a beat flag. Beat response is the next slice, so a beat has more than one look to land on. A user-facing beat control waits.
 - **Automatic map changes:** controls how long maps are generated and shown. The first version evolves automatically. A pace setting waits, and any later control uses seconds.
 - **Automatic horizontal shifting:** percentage and frequency, plus a minimum interval between shifts. Keep this only if it remains visually valuable. Any later timing is frame-rate independent.
 - **Rendering resolution, color depth, adapter selection, frame idle delay:** Windows and DirectDraw performance controls. The first version uses the capped simulation size in [Rendering](#rendering). A quality setting waits.
@@ -140,7 +155,7 @@ The Windows project has a substantial set of rendering behaviors and options. So
 - Automatic variation: visuals evolve on their own. Pause freezes the picture. Lock holds the current map, waveform, and palette while audio motion continues. Next visual advances the look.
 - Initial controls: sensitivity, pause, lock, and next visual.
 - Pixels: portable C++ simulates 8-bit palette indices, then expands them to RGBA8. Metal uploads and scales that buffer.
-- First slice: map mode 25 (smooth 1/r zoom), waveform 1 (one centered line), and one hue-cycle palette. Each frame feeds back through the map. A new map is built about every 20 seconds unless locked.
+- Current picture: map modes 17 (horizontal tunnel), 19 (vortex), 24 (fast swirl), and 25 (smooth 1/r zoom), with waveforms 1 (one line), 2 (two lines), and 6 (X-Y oscilloscope). The window opens on mode 25 and waveform 1. Next and the 20-second timer pick a different pair. Mode 24 is not paired with waveform 6. Lock holds that pair and the palette. Pause freezes the picture. One hue-cycle palette. Each frame feeds back through the same warp. No new controls. Beat response is the next slice. Layered effects, chunked map generation, a GPU warp, and the screen saver host wait.
 - Launch: the visualizer opens immediately. Denied or failed capture keeps calm motion and shows an overlay that opens System Settings.
 
 ### Choices considered

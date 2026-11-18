@@ -59,6 +59,8 @@ public:
 
     bool paused() const { return paused_; }
     bool locked() const { return locked_; }
+    int mapMode() const { return mapParameters_.mode; }
+    int waveform() const { return waveform_; }
     int width() const { return width_; }
     int height() const { return height_; }
 
@@ -67,6 +69,7 @@ public:
     FrameView tick(double dt, const AudioFrame& audio);
 
 private:
+    void pickLook();
     void rebuildMap();
     void expandPalette(const std::uint8_t* indices);
 
@@ -74,7 +77,11 @@ private:
     int height_ = 0;
     bool paused_ = false;
     bool locked_ = false;
+    // Opens on mode 25 and waveform 1. Next and the timer replace the pair.
+    int waveform_ = 1;
     double mapElapsed_ = 0;
+    // Seconds the picture has been moving. Pause holds it. Lock does not.
+    double motionTime_ = 0;
     float phase_ = 0;
     MapParameters mapParameters_{};
     std::uint32_t rngState_;
