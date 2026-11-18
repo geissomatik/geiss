@@ -13,12 +13,21 @@ for general information about Geiss please see:
 - [Geiss @ WinampHeritage.com](https://winampheritage.com/visualizations/geiss)
 - [Geisswerks — home page of Ryan M. Geiss](https://www.geisswerks.com/)
 
-A macOS picture prototype lives in [`macos/`](macos/README.md). The product brief is [`docs/spec/macos-port.md`](docs/spec/macos-port.md).
-
 For a YouTube video showing Geiss in action, please click:
 
 [![Video "Windows 95 + Winamp + Geiss = Aesthetic"](https://img.youtube.com/vi/MfFcRsUZCxw/hqdefault.jpg)](https://youtu.be/MfFcRsUZCxw?t=15)
 
+
+# macOS app
+
+[`macos/`](macos/README.md) is a standalone window for Apple Silicon, on macOS 14.2 or later. It draws one Geiss zoom and one waveform, and the line follows the sound coming out of the Mac.
+
+- The zoom is map mode 25. The line is waveform 1. The colors are one cycling palette. The picture changes about every 20 seconds.
+- Sensitivity is remembered. Pause, lock, and next visual are the other controls.
+- Visual > Tone plays a steady note. Visual > Silence lets the line fade. Otherwise the window listens to the Mac's output.
+- The picture engine is portable C++ in [`engine/`](engine). Metal displays it. The Windows screensaver and plug-in sources stay on their own build.
+
+Build steps, the license, and troubleshooting are in [`macos/README.md`](macos/README.md). The product brief is [`docs/spec/macos-port.md`](docs/spec/macos-port.md).
 
 # Compiling locally
 
