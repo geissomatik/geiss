@@ -62,6 +62,9 @@ struct GeissApp: App {
                 }
                 .keyboardShortcut("n", modifiers: [])
                 Divider()
+                Button("System Audio") {
+                    VisualizerModel.shared.preview = .system
+                }
                 Button("Tone") {
                     VisualizerModel.shared.preview = .tone
                 }

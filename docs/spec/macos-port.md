@@ -32,7 +32,7 @@ Build a modernized Geiss visualizer for Apple Silicon Macs. Preserve the recogni
 ## Audio behavior
 
 - React to system audio output, including music, notifications, and other sounds.
-- Capture with a non-exclusive stereo Core Audio tap of the default output mix (`CATapDescription` and a private aggregate device). Playback continues. Recreate the tap when the default output device changes.
+- Capture with a non-exclusive stereo Core Audio tap of the default output mix (`CATapDescription` and a private aggregate device). Playback continues. Recreate the tap when the default output device changes. If that device tap cannot be created, try one global stereo tap. A failure of both keeps calm motion and shows the settings overlay.
 - `NSAudioCaptureUsageDescription` supplies the system prompt. There is no public preflight API for this permission; the prompt appears when the tap starts.
 - Split the work into three pieces:
   - Capture, in Swift, copies PCM and returns from the audio callback.
@@ -78,7 +78,7 @@ The first build proves the architecture with a small slice:
 - Waveform 1, one smoothed line across the frame.
 - A complete map is built when a visual starts. Another is built about every 20 seconds unless the visual is locked. Next builds one immediately. Pause freezes that timer. Chunked background generation waits.
 - The index buffer and hue-cycle palette described above, scaled by Metal.
-- Until the system-audio tap exists, the window plays a generated tone or silence.
+- The window listens to the default output mix. Visual > Tone and Visual > Silence override that source. The tap keeps running during an override.
 
 ## Project layout and code policy
 
