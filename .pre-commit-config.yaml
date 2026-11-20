@@ -1,0 +1,19 @@
+# Install once with:  pre-commit install
+# Run on everything:  pre-commit run --all-files
+# Needs clang-tidy (brew install llvm) and SwiftLint (brew install swiftlint).
+repos:
+  - repo: local
+    hooks:
+      - id: clang-tidy
+        name: clang-tidy (engine and macOS bridge)
+        entry: scripts/clang-tidy.sh
+        language: script
+        files: ^(engine|macos)/.*\.(cpp|mm)$
+
+      - id: swiftlint
+        name: SwiftLint
+        entry: swiftlint lint --quiet
+        language: system
+        types: [swift]
+        files: ^macos/
+        verbose: true # show warnings even when the hook passes

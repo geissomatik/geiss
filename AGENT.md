@@ -46,4 +46,5 @@ Still ahead: beat response is the next slice. The remaining map modes and wavefo
 
 - During brainstorming and specification work, do not implement application code unless the user explicitly asks to begin implementation.
 - Keep changes focused on the requested task. Do not add tests or run test suites unless asked.
+- Keep `engine/`, the Objective-C++ bridge, and `macos/` clean under the pre-commit hooks (`pre-commit run --all-files`): clang-tidy per [`.clang-tidy`](.clang-tidy) and SwiftLint per [`.swiftlint.yml`](.swiftlint.yml). Fix findings rather than adding `NOLINT`, unless the check is wrong for that line, and say why in the comment. The legacy Windows sources are not linted.
 - Explain important design assumptions and unresolved product questions in the spec rather than silently deciding them.

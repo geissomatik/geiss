@@ -31,6 +31,16 @@ The window opens at 1280×720 and asks to record system audio. The picture start
 
 The bar reads LIVE while the tap is running, WAIT while it is starting or blocked, TONE for the generated note, and QUIET for silence. Sensitivity is remembered. Pause and lock are not.
 
+## Linting
+
+A pre-commit hook lints the files you commit. clang-tidy checks the C++ in `engine/` and the Objective-C++ bridge, using [`.clang-tidy`](../.clang-tidy). Any finding blocks the commit. SwiftLint checks the Swift in `macos/`, using [`.swiftlint.yml`](../.swiftlint.yml). Only errors block the commit, and warnings are shown. The Windows sources in the repository root are not linted.
+
+```bash
+brew install llvm swiftlint pre-commit
+pre-commit install
+pre-commit run --all-files
+```
+
 ## License
 
 Copyright (c) 1998-2022 Ryan Geiss. The picture engine and this app are licensed under the 3-Clause BSD License. See [LICENSE](../LICENSE).
@@ -45,3 +55,5 @@ Copyright (c) 1998-2022 Ryan Geiss. The picture engine and this app are licensed
 | Playback stops while Geiss is open | Quit Geiss. The tap is meant to leave playback running. |
 | `xcodebuild` cannot find Metal | Build on an Apple Silicon Mac with Xcode, for the `arm64` destination above. |
 | The engine tests fail to configure | Use CMake 3.20 or newer and run the commands from the repository root. |
+| The commit stops with "clang-tidy not found" | Run `brew install llvm`. The hook finds Homebrew's clang-tidy on its own. |
+| SwiftLint lists warnings but the commit goes through | That is expected. Only SwiftLint errors block a commit. |

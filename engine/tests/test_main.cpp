@@ -94,7 +94,7 @@ void testWarpDecayAndSample() {
 
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            map[static_cast<std::size_t>(y * width + x)] = {static_cast<float>(x), static_cast<float>(y)};
+            map[static_cast<std::size_t>(y) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x)] = {static_cast<float>(x), static_cast<float>(y)};
         }
     }
     src[0] = 100;
@@ -161,17 +161,18 @@ void testEnginePauseDrawsALine() {
     const geiss::FrameView frame = engine.tick(1.0 / 30.0, audio);
     check(frame.width == 32 && frame.height == 24, "engine reports the simulation size");
     unsigned color = 0;
-    for (int i = 0; i < frame.width * frame.height; ++i) {
+    const std::size_t pixels = static_cast<std::size_t>(frame.width) * static_cast<std::size_t>(frame.height);
+    for (std::size_t i = 0; i < pixels; ++i) {
         color += frame.rgba[i * 4];
         color += frame.rgba[i * 4 + 1];
         color += frame.rgba[i * 4 + 2];
     }
     check(color > 0, "a tone leaves color in the frame");
 
-    std::vector<std::uint8_t> frozen(frame.rgba, frame.rgba + frame.width * frame.height * 4);
+    std::vector<std::uint8_t> frozen(frame.rgba, frame.rgba + pixels * 4);
     engine.setPaused(true);
     const geiss::FrameView held = engine.tick(1.0, audio);
-    check(frozen.size() == static_cast<std::size_t>(held.width * held.height * 4), "pause keeps the size");
+    check(frozen.size() == static_cast<std::size_t>(held.width) * static_cast<std::size_t>(held.height) * 4, "pause keeps the size");
     bool same = true;
     for (std::size_t i = 0; i < frozen.size(); ++i) {
         same = same && frozen[i] == held.rgba[i];
@@ -181,7 +182,7 @@ void testEnginePauseDrawsALine() {
 
 }  // namespace
 
-int main() {
+int main() {  // NOLINT(bugprone-exception-escape): a test may abort on a failed allocation
     testMode25PullsTowardCenter();
     testWarpDecayAndSample();
     testAnalysis();

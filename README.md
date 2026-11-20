@@ -27,7 +27,7 @@ For a YouTube video showing Geiss in action, please click:
 - Visual > Tone plays a steady note. Visual > Silence lets the line fade. Otherwise the window listens to the Mac's output.
 - The picture engine is portable C++ in [`engine/`](engine). Metal displays it. The Windows screensaver and plug-in sources stay on their own build.
 
-Build steps, the license, and troubleshooting are in [`macos/README.md`](macos/README.md). The product brief is [`docs/spec/macos-port.md`](docs/spec/macos-port.md).
+Build steps, linting, the license, and troubleshooting are in [`macos/README.md`](macos/README.md). A pre-commit hook runs clang-tidy on `engine/` and the bridge, and SwiftLint on `macos/`. The product brief is [`docs/spec/macos-port.md`](docs/spec/macos-port.md).
 
 # Compiling locally
 

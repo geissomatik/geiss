@@ -137,7 +137,7 @@ void buildMode25Map(std::vector<SourcePoint>& out, int width, int height, const 
     out.resize(static_cast<std::size_t>(width) * static_cast<std::size_t>(height));
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            out[static_cast<std::size_t>(y * width + x)] = mode25Source(x, y, width, height, map);
+            out[static_cast<std::size_t>(y) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x)] = mode25Source(x, y, width, height, map);
         }
     }
 }
@@ -146,7 +146,7 @@ void buildMap(std::vector<SourcePoint>& out, int width, int height, const MapPar
     out.resize(static_cast<std::size_t>(width) * static_cast<std::size_t>(height));
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            out[static_cast<std::size_t>(y * width + x)] = mapSource(x, y, width, height, map);
+            out[static_cast<std::size_t>(y) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x)] = mapSource(x, y, width, height, map);
         }
     }
 }
@@ -162,7 +162,7 @@ void warpIndices(const std::uint8_t* src, std::uint8_t* dst, int width, int heig
 
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            const std::size_t index = static_cast<std::size_t>(y * width + x);
+            const std::size_t index = static_cast<std::size_t>(y) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x);
             const SourcePoint target = map[index];
             const float sx = wrapX(static_cast<float>(x) + (target.x - static_cast<float>(x)) * step, width);
             float sy = static_cast<float>(y) + (target.y - static_cast<float>(y)) * step;
@@ -175,10 +175,10 @@ void warpIndices(const std::uint8_t* src, std::uint8_t* dst, int width, int heig
             const float fx = std::clamp(sx - static_cast<float>(x0), 0.f, 1.f);
             const float fy = std::clamp(sy - static_cast<float>(y0), 0.f, 1.f);
 
-            const float p00 = src[static_cast<std::size_t>(y0 * width + x0)];
-            const float p10 = src[static_cast<std::size_t>(y0 * width + x1)];
-            const float p01 = src[static_cast<std::size_t>(y1 * width + x0)];
-            const float p11 = src[static_cast<std::size_t>(y1 * width + x1)];
+            const float p00 = src[static_cast<std::size_t>(y0) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x0)];
+            const float p10 = src[static_cast<std::size_t>(y0) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x1)];
+            const float p01 = src[static_cast<std::size_t>(y1) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x0)];
+            const float p11 = src[static_cast<std::size_t>(y1) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x1)];
             const float top = p00 * (1.f - fx) + p10 * fx;
             const float bottom = p01 * (1.f - fx) + p11 * fx;
             float value = (top * (1.f - fy) + bottom * fy) * decay;
