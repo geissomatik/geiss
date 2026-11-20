@@ -143,7 +143,7 @@ Each map also darkens its center every frame (`center_dwindle`), so the zoom doe
 Picking follows `CModeInfo` and `Clip_Num_Effects`:
 - Each mode gives each effect a weight out of 1000. The weights use the original's truecolor adjustment: nuclide × 1.3, chasers − 50, dots and bar + 220, shade + 150, each kept within 0…900, and grid + 8.
 - Each effect gets one roll. While sound is playing, every weight is multiplied by 0.7.
-- Without sound, effects are added until the mode's minimum is met. Then effects are dropped at random down to the mode's maximum. Most modes allow 1…2. Mode 2 allows up to 5, mode 11 up to 4, modes 17 and up 1…3, and modes 10, 11, 12, and 15 allow none.
+- Without sound, effects are added until the mode's minimum is met. Then effects are dropped at random down to the mode's maximum. Most modes have a minimum of 1 and a maximum of 2. Mode 2 allows up to 5, and modes 17 and up 1…3. Modes 10, 11, 12, and 15 have no minimum, so their looks can have no effects; their maximums are 2, 4, 2, and 1. While sound is playing the minimum is not enforced, so a look on any mode can open with no effects.
 - Chasers come as one or two. A grid turns the bar off. The grid's direction is random.
 - Effects are part of the look. Lock holds them. Next and the 20-second timer pick a new set for the new map. Pause freezes them with the picture.
 
@@ -220,7 +220,7 @@ The Windows project has a substantial set of rendering behaviors and options. So
 - Automatic variation: visuals evolve on their own. Pause freezes the picture. Lock holds the current map, waveform, and palette while audio motion continues. Next visual advances the look.
 - Initial controls: sensitivity, pause, lock, and next visual.
 - Pixels: portable C++ simulates 8-bit palette indices, then expands them to RGBA8. Metal uploads and scales that buffer.
-- Current picture: all 25 original map modes and all 6 waveforms, picked with the original's weights and excluded pairs. The window opens on mode 25 and waveform 1. Next and the 20-second timer pick a different pair. Each look also picks one to a few of the original's seven layered effects, with its per-map weights. Lock holds the pair, its effects, and the palette. Pause freezes the picture. One hue-cycle palette with a white-hot top. Each frame feeds back through the same warp. No new controls. Beats brighten the waveform and land look changes, from a bass-focused detector. The horizontal slide shift waits. Chunked map generation, a GPU warp, and the screen saver host wait.
+- Current picture: all 25 original map modes and all 6 waveforms, picked with the original's weights and excluded pairs. The window opens on mode 25 and waveform 1. Next and the 20-second timer pick a different pair. Each look also picks up to a few of the original's seven layered effects, with its per-map weights. Lock holds the pair, its effects, and the palette. Pause freezes the picture. One hue-cycle palette with a white-hot top. Each frame feeds back through the same warp. No new controls. Beats brighten the waveform and land look changes, from a bass-focused detector. The horizontal slide shift waits. Chunked map generation, a GPU warp, and the screen saver host wait.
 - Launch: the visualizer opens immediately. Denied or failed capture keeps calm motion and shows an overlay that opens System Settings.
 
 ### Choices considered
