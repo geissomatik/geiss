@@ -616,11 +616,12 @@ void testNewWaveforms() {
     constexpr int height = 90;
 
     geiss::Engine vertical = engineDrawing(3, width, height);
-    const int centerX = static_cast<int>(vertical.map().centerXNorm * width);
+    const float centerX = vertical.map().centerXNorm * width;
     const auto verticalLit = litPixels(vertical.tick(1.0 / 30.0, flatWave(width)));
-    bool onCenter = !verticalLit.empty();
+    // The smoothed position can land a hair under a whole-pixel center, so allow one column.
+    bool onCenter = !verticalLit.empty() && std::fabs(static_cast<float>(verticalLit.front().first) - centerX) <= 1.f;
     for (const auto& [x, y] : verticalLit) {
-        onCenter = onCenter && x == centerX;
+        onCenter = onCenter && x == verticalLit.front().first;
     }
     check(onCenter && verticalLit.size() == static_cast<std::size_t>(height), "waveform 3 is one vertical line through the center");
 
@@ -642,6 +643,139 @@ void testNewWaveforms() {
         onRing = onRing && std::fabs(std::hypot(static_cast<float>(x) - cx, static_cast<float>(y) - cy) - radius) < 2.f;
     }
     check(onRing, "waveform 5 is a circle of 60 pixels at 640 wide around the center");
+
+    // The first 50 points blend toward the points after 314, so a rising wave closes
+    // the circle instead of jumping back to its starting radius.
+    constexpr int ringWidth = 320;
+    constexpr int ringHeight = 240;
+    geiss::Engine closing = engineDrawing(5, ringWidth, ringHeight);
+    const float closeX = closing.map().centerXNorm * ringWidth;
+    const float closeY = closing.map().centerYNorm * ringHeight;
+    geiss::AudioFrame ramp = flatWave(ringWidth);
+    for (std::size_t i = 0; i < ramp.samples.size(); ++i) {
+        ramp.samples[i] = 0.4f * static_cast<float>(i) / static_cast<float>(ramp.samples.size() - 1);
+    }
+    float startRadius = 0;
+    int startPoints = 0;
+    for (const auto& [x, y] : litPixels(closing.tick(1.0 / 30.0, ramp))) {
+        const float angle = std::atan2(static_cast<float>(y) - closeY, static_cast<float>(x) - closeX);
+        if (angle > 0.1f && angle < 0.2f) {
+            startRadius += std::hypot(static_cast<float>(x) - closeX, static_cast<float>(y) - closeY);
+            ++startPoints;
+        }
+    }
+    // Unblended, these points would sit near the base radius of 30. Blended, they sit near
+    // the end of the ramp, about 50.
+    check(startPoints > 0 && startRadius / static_cast<float>(startPoints) > 44.f,
+          "waveform 5 blends its start toward its end so the circle closes");
+}
+
+// A fresh engine moved by Next to `mode` with waveform 1.
+geiss::Engine engineShowing(int mode, int width, int height) {
+    geiss::Engine engine(23);
+    engine.resize(width, height);
+    for (int i = 0; i < 5000 && (engine.mapMode() != mode || engine.waveform() != 1); ++i) {
+        engine.nextVisual();
+    }
+    check(engine.mapMode() == mode && engine.waveform() == 1, "Next reaches the requested map with waveform 1");
+    return engine;
+}
+
+void testLineSitsLowerOverScroll() {
+    constexpr int width = 160;
+    constexpr int height = 90;
+    geiss::Engine scroll = engineShowing(10, width, height);
+    const auto lit = litPixels(scroll.tick(1.0 / 30.0, flatWave(width)));
+    bool low = lit.size() == static_cast<std::size_t>(width);
+    for (const auto& [x, y] : lit) {
+        low = low && y == static_cast<int>(height * 0.75f);
+    }
+    check(low, "waveform 1 sits at three quarters of the height over mode 10");
+
+    geiss::Engine zoom = engineShowing(25, width, height);
+    const auto middle = litPixels(zoom.tick(1.0 / 30.0, flatWave(width)));
+    check(!middle.empty() && middle.front().second == height / 2, "waveform 1 sits at the middle over other maps");
+}
+
+void testLowModeShapes() {
+    // r640 is 80 at (40, 32) on a 64-wide frame centered at (32, 32).
+    constexpr float r = 80.f;
+
+    const geiss::MapParameters constant = centeredMap(1);
+    checkNear(scaleAt(40, 32, constant), constant.scale, 0.0001f, "mode 1 uses its constant scale");
+    checkNear(scaleAt(41, 32, constant), constant.scale, 0.0001f, "mode 1 dithers to the same scale");
+
+    const geiss::MapParameters outward = centeredMap(2);
+    check(outward.scale >= 1.f, "mode 2 zooms outward");
+    checkNear(scaleAt(40, 32, outward), outward.scale, 0.0001f, "mode 2 uses its constant scale");
+
+    const geiss::MapParameters sphere = centeredMap(4);
+    checkNear(scaleAt(40, 32, sphere), 0.9f + r * 0.0025f * 0.14f, 0.0001f, "mode 4 grows its scale with the radius");
+
+    const geiss::MapParameters perspective = centeredMap(5);
+    checkNear(scaleAt(40, 32, perspective), perspective.f2 - perspective.f1 * (r / 200.f * 1.7f), 0.0001f,
+              "mode 5 is super-perspective");
+
+    const geiss::MapParameters ripples = centeredMap(8);
+    checkNear(scaleAt(40, 32, ripples), 0.85f + 0.1f * std::sin(std::sqrt(r) * ripples.f1), 0.0001f,
+              "mode 8 ripples with the root of the radius");
+
+    const geiss::MapParameters hole = centeredMap(13);
+    checkNear(scaleAt(40, 32, hole), (1.04f - r * std::sqrt(r) * 0.00025f * 0.14f - 1.f) * hole.f1 + 1.f, 0.0001f,
+              "mode 13 is a black hole");
+
+    const geiss::MapParameters split = centeredMap(14);
+    checkNear(scaleAt(32, 40, split), 0.9f + 0.2f * std::cos(8.f * 12.f / 64.f), 0.0001f,
+              "mode 14 follows the cosine of the height");
+}
+
+void testDitherParity() {
+    // Pixels where x and y have the same parity use the first transform; the others use scale2.
+    const geiss::MapParameters petals = centeredMap(9);
+    checkNear(scaleAt(40, 32, petals), petals.f1 - 80.f * petals.f2, 0.0001f, "mode 9 even pixels use f1 - r*f2");
+    checkNear(scaleAt(41, 32, petals), petals.scale2, 0.0001f, "mode 9 odd pixels use scale2");
+    checkNear(scaleAt(41, 33, petals), petals.f1 - std::hypot(9.f, 1.f) * 10.f * petals.f2, 0.0001f,
+              "mode 9 dithers by the parity of x and y together");
+
+    const geiss::MapParameters twin = centeredMap(11);
+    checkNear(scaleAt(40, 32, twin), twin.scale, 0.0001f, "mode 11 even pixels use scale");
+    checkNear(scaleAt(41, 32, twin), twin.scale2, 0.0001f, "mode 11 odd pixels use scale2");
+}
+
+void testTallFrameKeepsScalesPositive() {
+    // On a frame much taller than wide, the corners sit far beyond the 640x480 radii the
+    // original was tuned for. Modes 7 and 9 must not flip them through the center.
+    constexpr int width = 64;
+    constexpr int height = 200;
+    for (const int mode : {7, 9}) {
+        geiss::MapParameters map = centeredMap(mode);
+        map.f1 = mode == 9 ? 0.98f : 0.92f;
+        map.f2 = mode == 9 ? 0.0021f : 0.0011f;
+        bool outward = true;
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                const geiss::SourcePoint source = geiss::mapSource(x, y, width, height, map);
+                const float dx = static_cast<float>(x) - 32.f;
+                const float dy = static_cast<float>(y) - 100.f;
+                outward = outward && (source.x - 32.f) * dx + (source.y - 100.f) * dy >= -0.0001f;
+            }
+        }
+        check(outward, "modes 7 and 9 never read from the other side on a tall frame");
+    }
+}
+
+void testRandomLeavesZero() {
+    geiss::Random random{0};
+    const std::uint32_t first = random.next();
+    check(first != 0 && random.next() != first, "a zero random state still moves");
+    geiss::Random looks{0};
+    const geiss::Look a = geiss::randomLook(looks);
+    bool varied = false;
+    for (int i = 0; i < 20; ++i) {
+        const geiss::Look b = geiss::randomLook(looks);
+        varied = varied || b.mode != a.mode || b.waveform != a.waveform;
+    }
+    check(varied, "looks from a zero random state vary");
 }
 
 void testLookWaitsForBigBeat() {
@@ -691,6 +825,11 @@ int main() {  // NOLINT(bugprone-exception-escape): a test may abort on a failed
     testNewModeShapes();
     testLookPicking();
     testNewWaveforms();
+    testLineSitsLowerOverScroll();
+    testLowModeShapes();
+    testDitherParity();
+    testTallFrameKeepsScalesPositive();
+    testRandomLeavesZero();
     if (failures != 0) {
         std::cerr << failures << " failed\n";
         return EXIT_FAILURE;

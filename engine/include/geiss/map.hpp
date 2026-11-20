@@ -40,7 +40,8 @@
 
 namespace geiss {
 
-// xorshift32, so the engine does not depend on a global rand().
+// xorshift32, so the engine does not depend on a global rand(). A zero state would
+// stay zero forever, so next() replaces it with a fixed nonzero value first.
 struct Random {
     std::uint32_t state = 1;
 

@@ -41,6 +41,9 @@
 namespace geiss {
 
 std::uint32_t Random::next() {
+    if (state == 0) {
+        state = 0x9E3779B9u;
+    }
     state ^= state << 13;
     state ^= state >> 17;
     state ^= state << 5;
@@ -82,7 +85,8 @@ Rotation rotationOf(float turn) {
     return Rotation{std::cos(turn), std::sin(turn)};
 }
 
-// Mode 24's pixel loop replaces the shared turn with 0.05.
+// Mode 24's pixel loop replaces the shared turn with 0.05, so the original's random
+// rotation direction does not reach it and every fast swirl turns the same way.
 float effectiveTurn(const MapParameters& map) {
     return map.mode == 24 ? 0.05f : map.turn;
 }
@@ -203,11 +207,14 @@ float lowModeScale(const Offset& offset, int height, int x, int y, const MapPara
             // otherwise it used r * 1.7, which is the branch it normally ran.
             return map.f2 - map.f1 * (r / 200.f * 1.7f);
         case 7:
-            return map.f1 - r * map.f2 + jitter(x, y, map.noiseSeed);
+            // Tall frames reach radii the 640x480 original never did, where f1 - r*f2
+            // would turn negative and flip the corners. The scale stops at 0.
+            return std::max(map.f1 - r * map.f2, 0.f) + jitter(x, y, map.noiseSeed);
         case 8:
             return 0.85f + 0.1f * std::sin(std::sqrt(r) * map.f1);
         case 9:
-            return map.f1 - r * map.f2;
+            // Stops at 0 on tall frames, as mode 7 does.
+            return std::max(map.f1 - r * map.f2, 0.f);
         case 13: {
             const float scale = 1.04f - r * std::sqrt(r) * 0.00025f * 0.14f;
             return (scale - 1.f) * map.f1 + 1.f;
@@ -453,6 +460,8 @@ void warpIndices(const std::uint8_t* src, std::uint8_t* dst, int width, int heig
         for (int x = 0; x < width; ++x) {
             const std::size_t index = static_cast<std::size_t>(y) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x);
             const SourcePoint target = map[index];
+            // Columns wrap around, as the original's newx did (newx += FXW-1 while below 0),
+            // so maps that read past the side edges pull in the opposite edge. Rows clamp.
             const float sx = wrapX(static_cast<float>(x) + (target.x - static_cast<float>(x)) * step, width);
             float sy = static_cast<float>(y) + (target.y - static_cast<float>(y)) * step;
             sy = std::clamp(sy, 0.f, maxY);

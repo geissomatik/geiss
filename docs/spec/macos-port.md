@@ -103,6 +103,11 @@ Intentional differences:
 - Mode 14 leaves out a jitter of under 1/1024 in the height.
 - Mode 20 reads a negative root above the frame as zero.
 - Mode 5 always uses the `r·1.7` branch, which is the one the original normally ran.
+- Modes 7 and 9 stop their per-pixel scale at 0. On frames much taller than wide, `r640` reaches radii the 640×480 original never did, and `f1 − r640·f2` would turn negative and flip the corners through the center.
+
+Kept as in the original:
+- A source point past the left or right edge wraps around (`newx += FXW-1` while below 0), so maps that read beyond the sides, such as 2, 10, and 16, pull in the opposite edge. Rows clamp.
+- Mode 24's pixel loop sets `turn1 = 0.05`, so the random rotation direction does not reach it and every fast swirl turns the same way.
 
 Waveforms, from `RenderWave`. A −1…1 sample covers about 35% of the height before each waveform's own scale.
 
