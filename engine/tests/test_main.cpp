@@ -155,6 +155,7 @@ void testAnalysis() {
 void testEnginePauseDrawsALine() {
     geiss::Engine engine(1);
     engine.resize(32, 24);
+    engine.setEffects({});
     geiss::AudioFrame audio;
     audio.level = 0.5f;
     audio.volume = 100.f;
@@ -312,10 +313,12 @@ unsigned colorSum(const geiss::FrameView& frame) {
 void testBeatBrightness() {
     geiss::Engine dark(1);
     dark.resize(32, 24);
+    dark.setEffects({});
     check(colorSum(dark.tick(1.0 / 30.0, beatFrame(true, 0.f, 0.f))) == 0, "a beat-mode gap draws no line");
 
     geiss::Engine lit(1);
     lit.resize(32, 24);
+    lit.setEffects({});
     check(colorSum(lit.tick(1.0 / 30.0, beatFrame(true, 1.f, 0.f))) > 0, "a beat-mode hit draws the line");
 }
 
@@ -373,10 +376,13 @@ void testWaveBrightnessFollowsVolume() {
 
     geiss::Engine quietEngine(1);
     quietEngine.resize(32, 24);
+    quietEngine.setEffects({});
     geiss::Engine normalEngine(1);
     normalEngine.resize(32, 24);
+    normalEngine.setEffects({});
     geiss::Engine loudEngine(1);
     loudEngine.resize(32, 24);
+    loudEngine.setEffects({});
     const unsigned quietColor = colorSum(quietEngine.tick(1.0 / 30.0, quiet));
     const unsigned normalColor = colorSum(normalEngine.tick(1.0 / 30.0, normal));
     const unsigned loudColor = colorSum(loudEngine.tick(1.0 / 30.0, loud));
@@ -388,6 +394,7 @@ void testWaveBrightnessFollowsVolume() {
     silent.averageVolume = 0.f;
     geiss::Engine silentEngine(1);
     silentEngine.resize(32, 24);
+    silentEngine.setEffects({});
     check(colorSum(silentEngine.tick(1.0 / 30.0, silent)) == 0, "no volume draws no line");
 }
 
@@ -406,6 +413,7 @@ void testWhiteHotPaletteTop() {
     geiss::AudioFrame full = beatFrame(false, 1.f, 0.f);
     geiss::Engine fullEngine(1);
     fullEngine.resize(32, 24);
+    fullEngine.setEffects({});
     check(whitestPixel(fullEngine.tick(1.0 / 30.0, full)) > 245, "a full-brightness line is drawn white-hot");
 
     geiss::AudioFrame dimmer = beatFrame(false, 1.f, 0.f);
@@ -413,11 +421,13 @@ void testWhiteHotPaletteTop() {
     dimmer.averageVolume = 30.f;
     geiss::Engine dimmerEngine(1);
     dimmerEngine.resize(32, 24);
+    dimmerEngine.setEffects({});
     check(whitestPixel(dimmerEngine.tick(1.0 / 30.0, dimmer)) == 0, "below the top of the palette a line keeps its full hue");
 
     geiss::AudioFrame half = beatFrame(true, 0.5f, 0.f);
     geiss::Engine halfEngine(1);
     halfEngine.resize(32, 24);
+    halfEngine.setEffects({});
     check(whitestPixel(halfEngine.tick(1.0 / 30.0, half)) == 0, "a beat-mode line between hits is not white");
 }
 
@@ -587,6 +597,7 @@ geiss::Engine engineDrawing(int waveform, int width, int height) {
         engine.nextVisual();
     }
     check(engine.waveform() == waveform, "Next reaches every waveform");
+    engine.setEffects({});
     return engine;
 }
 
@@ -678,6 +689,7 @@ geiss::Engine engineShowing(int mode, int width, int height) {
         engine.nextVisual();
     }
     check(engine.mapMode() == mode && engine.waveform() == 1, "Next reaches the requested map with waveform 1");
+    engine.setEffects({});
     return engine;
 }
 
@@ -805,6 +817,318 @@ void testLookWaitsForBigBeat() {
     check(secondsUntilLookChanges(locked, beatFrame(true, 1.f, 2.f), 30) < 0, "lock holds the look through big beats");
 }
 
+
+void testModeEffectsTable() {
+    using geiss::Effect;
+    const geiss::ModeEffects one = geiss::modeEffects(1);
+    const auto at = [](const geiss::ModeEffects& info, Effect effect) { return info.weights[static_cast<std::size_t>(effect)]; };
+    check(at(one, Effect::Chasers) == 170 && at(one, Effect::Bar) == 370 && at(one, Effect::Dots) == 230 &&
+              at(one, Effect::Solar) == 680 && at(one, Effect::Grid) == 12 && at(one, Effect::Nuclide) == 220 &&
+              at(one, Effect::Shade) == 550,
+          "mode 1 takes the truecolor adjustment of its weights");
+    // 170 * 1.3f is a hair under 221 in float, and the original truncated it.
+    check(one.solarMax == 400, "solar strength comes from the 8-bit table");
+    check(at(geiss::modeEffects(8), Effect::Shade) == 210, "mode 8 keeps its chained shade weight of 60");
+    const geiss::ModeEffects fifteen = geiss::modeEffects(15);
+    check(fifteen.minEffects == 0 && fifteen.maxEffects == 1 && at(fifteen, Effect::Chasers) == 0, "mode 15 allows one effect");
+    checkNear(geiss::modeEffects(12).centerDwindle, 0.915f, 0.0001f, "mode 12 darkens its centerline");
+    checkNear(geiss::modeEffects(21).centerDwindle, 0.98f, 0.0001f, "modes 20 to 23 darken the center");
+    checkNear(geiss::modeEffects(25).centerDwindle, 1.f, 0.0001f, "mode 25 leaves the center alone");
+    check(geiss::modeEffects(25).maxEffects == 3, "modes 17 and up allow three effects");
+    bool capped = true;
+    for (int mode = geiss::kFirstMapMode; mode <= geiss::kLastMapMode; ++mode) {
+        for (const int weight : geiss::modeEffects(mode).weights) {
+            capped = capped && weight >= 0 && weight <= 900;
+        }
+    }
+    check(capped, "every weight stays within 0...900");
+}
+
+void testRandomEffectsRespectLimits() {
+    using geiss::Effect;
+    geiss::Random random{11};
+    bool withinMax = true;
+    bool withinMin = true;
+    bool noBarWithGrid = true;
+    bool hideNeedsNuclide = true;
+    bool zeroNeverComes = true;
+    bool chaserCount = true;
+    for (int mode = geiss::kFirstMapMode; mode <= geiss::kLastMapMode; ++mode) {
+        const geiss::ModeEffects info = geiss::modeEffects(mode);
+        for (int i = 0; i < 400; ++i) {
+            const bool sound = i % 2 == 0;
+            const geiss::EffectSet effects = geiss::randomEffects(mode, sound, random);
+            const int count = effects.count();
+            withinMax = withinMax && count <= info.maxEffects;
+            // A grid can turn the bar off after the minimum was met.
+            if (!sound) {
+                withinMin = withinMin && count >= info.minEffects - 1;
+            }
+            noBarWithGrid = noBarWithGrid && !(effects.has(Effect::Grid) && effects.has(Effect::Bar));
+            hideNeedsNuclide = hideNeedsNuclide && (!effects.hideWaveform || (effects.has(Effect::Nuclide) && mode != 10));
+            for (std::size_t e = 0; e < effects.on.size(); ++e) {
+                zeroNeverComes = zeroNeverComes && !(effects.on[e] && info.weights[e] == 0);
+            }
+            chaserCount = chaserCount && (effects.chasers == 1 || effects.chasers == 2);
+        }
+    }
+    check(withinMax, "a look never has more effects than its mode allows");
+    check(withinMin, "without sound a look meets its mode's minimum");
+    check(noBarWithGrid, "a grid turns the bar off");
+    check(hideNeedsNuclide, "only the nuclide hides the waveform, never over mode 10");
+    check(zeroNeverComes, "an effect with weight 0 never comes up");
+    check(chaserCount, "chasers come as one or two");
+
+    int nuclideLooks = 0;
+    int hidden = 0;
+    int silentCount = 0;
+    int soundCount = 0;
+    for (int i = 0; i < 4000; ++i) {
+        const geiss::EffectSet effects = geiss::randomEffects(7, false, random);
+        if (effects.has(Effect::Nuclide)) {
+            ++nuclideLooks;
+            hidden += effects.hideWaveform ? 1 : 0;
+        }
+        silentCount += geiss::randomEffects(2, false, random).count();
+        soundCount += geiss::randomEffects(2, true, random).count();
+    }
+    const float hiddenShare = static_cast<float>(hidden) / static_cast<float>(nuclideLooks);
+    check(nuclideLooks > 1500, "mode 7 favors the nuclide");
+    checkNear(hiddenShare, 4.f / 7.f, 0.05f, "the nuclide hides the waveform 4 times in 7");
+    check(soundCount < silentCount, "sound lowers every weight");
+}
+
+using Pixels = std::vector<std::uint8_t>;
+
+int litCount(const Pixels& pixels) {
+    return static_cast<int>(std::count_if(pixels.begin(), pixels.end(), [](std::uint8_t p) { return p > 0; }));
+}
+
+// The farthest lit pixel from (cx, cy).
+float litReach(const Pixels& pixels, int width, float cx, float cy) {
+    float reach = 0;
+    for (std::size_t i = 0; i < pixels.size(); ++i) {
+        if (pixels[i] > 0) {
+            const int column = static_cast<int>(i) % width;
+            const int row = static_cast<int>(i) / width;
+            const auto x = static_cast<float>(column);
+            const auto y = static_cast<float>(row);
+            reach = std::max(reach, std::hypot(x - cx, y - cy));
+        }
+    }
+    return reach;
+}
+
+geiss::EffectSet only(geiss::Effect effect) {
+    geiss::EffectSet effects;
+    effects.set(effect, true);
+    return effects;
+}
+
+geiss::AudioFrame quietFrame() {
+    geiss::AudioFrame audio;
+    audio.silent = true;
+    return audio;
+}
+
+// Runs `frames` reference frames of one effect set on a blank buffer, in ticks of `perFrame`.
+Pixels runEffects(const geiss::EffectSet& effects, int mode, int width, int height, int frames, int ticksPerFrame,
+                  const geiss::AudioFrame& audio, std::uint32_t seed = 3) {
+    Pixels pixels(static_cast<std::size_t>(width) * static_cast<std::size_t>(height), 0);
+    geiss::EffectLayer layer(seed);
+    layer.startLook(effects);
+    for (int i = 0; i < frames * ticksPerFrame; ++i) {
+        layer.draw(pixels.data(), width, height, effects, mode, static_cast<float>(width) / 2.f,
+                   static_cast<float>(height) / 2.f, 1.0 / ticksPerFrame, audio);
+    }
+    return pixels;
+}
+
+void testEachEffectDraws() {
+    using geiss::Effect;
+    constexpr int width = 320;
+    constexpr int height = 240;
+    constexpr float cx = width / 2.f;
+    constexpr float cy = height / 2.f;
+    constexpr float scale = width / 640.f;
+    const geiss::AudioFrame sound = beatFrame(false, 1.f, 0.f);
+
+    const Pixels shade = runEffects(only(Effect::Shade), 25, width, height, 30, 1, sound);
+    check(litCount(shade) > 0 && litReach(shade, width, cx, cy) < 9.6f * scale + 30.f, "shade bobs glow near the center");
+    check(*std::max_element(shade.begin(), shade.end()) <= 251, "shade bobs stop adding at 250");
+
+    const Pixels chasers = runEffects(only(Effect::Chasers), 25, width, height, 30, 1, sound);
+    check(litCount(chasers) > 100, "chasers trace a path");
+    check(litReach(chasers, width, cx, cy) <= (139.f + 109.f) * scale + 2.f, "chasers stay on their curves");
+
+    geiss::EffectSet twoChasers = only(Effect::Chasers);
+    twoChasers.chasers = 2;
+    check(litCount(runEffects(twoChasers, 25, width, height, 30, 1, sound)) > litCount(chasers), "two chasers draw more");
+
+    // Chaser steps sit on a fixed grid of time, so the frame rate does not change the path.
+    check(runEffects(only(Effect::Chasers), 25, width, height, 30, 4, sound) == chasers,
+          "chasers draw the same path at 120 fps as at 30 fps");
+
+    const Pixels bar = runEffects(only(Effect::Bar), 25, width, height, 1, 1, sound);
+    bool sixteens = litCount(bar) > 0;
+    for (const std::uint8_t p : bar) {
+        sixteens = sixteens && p % 16 == 0;
+    }
+    check(sixteens, "one frame of the bar adds 16 per point");
+    check(litReach(bar, width, cx, cy) <= 31.f * scale * 1.5f + 2.f, "the bar stays near the center");
+    const Pixels slowBar = runEffects(only(Effect::Bar), 25, width, height, 60, 1, sound);
+    check(*std::max_element(slowBar.begin(), slowBar.end()) <= 238, "the bar stops adding at 223");
+    const Pixels fastBar = runEffects(only(Effect::Bar), 25, width, height, 1, 4, sound);
+    check(*std::max_element(fastBar.begin(), fastBar.end()) >= 12, "at 120 fps the bar adds its share each tick");
+
+    const Pixels dots = runEffects(only(Effect::Dots), 25, width, height, 1, 1, sound);
+    check(litCount(dots) == 1, "the first frame of dots draws one dot");
+    check(litCount(runEffects(only(Effect::Dots), 25, width, height, 1, 4, sound)) == 1,
+          "dots move once per reference frame at 120 fps");
+    check(litCount(runEffects(only(Effect::Dots), 25, width, height, 5, 1, sound)) > 1, "dots leave a trail");
+
+    const Pixels solar = runEffects(only(Effect::Solar), 1, width, height, 10, 1, sound);
+    check(litCount(solar) > 100, "solar particles land");
+    check(litReach(solar, width, cx, cy) < 36.f * scale + 2.f, "solar particles land within 35 pixels at 640 wide");
+
+    geiss::EffectSet burst;
+    burst.solarBurst = true;
+    check(litCount(runEffects(burst, 1, width, height, 1, 1, sound)) > 100, "map 1 can open with a solar burst");
+
+    const Pixels grid = runEffects(only(Effect::Grid), 25, width, height, 1, 1, sound);
+    const int spacing = width / 30;
+    bool onRows = litCount(grid) > 0;
+    for (std::size_t i = 0; i < grid.size(); ++i) {
+        onRows = onRows && (grid[i] == 0 || (static_cast<int>(i) / width) % spacing == 0);
+    }
+    check(onRows, "the grid draws a dot every 1/30 of the width");
+    check(litCount(grid) <= (width / spacing + 1) * (height / spacing + 1), "the grid is sparse");
+    // After one frame scrolling left, the column at x = -1 has left and the next one has
+    // come in at the right edge.
+    check(only(Effect::Grid).gridDirection == 1 && grid[width - 1] > 0, "the grid fills the edge it scrolls in from");
+
+    // The dot trail is in pixels, so clearing it leaves only the new dot.
+    geiss::EffectLayer layer(3);
+    const geiss::EffectSet dotsOnly = only(Effect::Dots);
+    layer.startLook(dotsOnly);
+    Pixels large(static_cast<std::size_t>(width) * height, 0);
+    for (int i = 0; i < 10; ++i) {
+        layer.draw(large.data(), width, height, dotsOnly, 25, cx, cy, 1.0, sound);
+    }
+    layer.clearTrail();
+    Pixels small(static_cast<std::size_t>(width / 2) * (height / 2), 0);
+    layer.draw(small.data(), width / 2, height / 2, dotsOnly, 25, cx / 2.f, cy / 2.f, 1.0, sound);
+    check(litCount(small) == 1, "a cleared trail draws no dots from the old size");
+}
+
+void testNuclide() {
+    using geiss::Effect;
+    constexpr int width = 320;
+    constexpr int height = 240;
+    geiss::AudioFrame steady = beatFrame(false, 1.f, 0.f);
+    steady.volume = 50.f;
+    Pixels pixels(static_cast<std::size_t>(width) * height, 0);
+    geiss::EffectLayer layer(5);
+    const geiss::EffectSet effects = only(Effect::Nuclide);
+    // The narrow average starts low, so the first frames of sound count as a jump.
+    for (int i = 0; i < 30; ++i) {
+        layer.draw(pixels.data(), width, height, effects, 25, width / 2.f, height / 2.f, 1.0, steady);
+    }
+    std::fill(pixels.begin(), pixels.end(), 0);
+    for (int i = 0; i < 30; ++i) {
+        layer.draw(pixels.data(), width, height, effects, 25, width / 2.f, height / 2.f, 1.0, steady);
+    }
+    check(litCount(pixels) == 0, "a steady volume drops no nuclide");
+    geiss::AudioFrame jump = steady;
+    jump.volume = 150.f;
+    layer.draw(pixels.data(), width, height, effects, 25, width / 2.f, height / 2.f, 1.0, jump);
+    check(litCount(pixels) > 20, "a jump in volume drops a ring of discs");
+    const float reach = litReach(pixels, width, width / 2.f, height / 2.f);
+    check(reach > 30.f * 0.5f && reach < (42.f + 11.f) * 0.5f + 2.f, "the discs sit on a ring around the center");
+
+    // Silence keeps the picture calm: no effect draws, and a burst due in silence is dropped.
+    geiss::EffectSet every;
+    every.on.fill(true);
+    every.chasers = 2;
+    every.solarBurst = true;
+    check(litCount(runEffects(every, 1, width, height, 120, 1, quietFrame())) == 0, "no effect draws in silence");
+
+    geiss::EffectLayer late(5);
+    geiss::EffectSet burstOnly;
+    burstOnly.solarBurst = true;
+    late.startLook(burstOnly);
+    std::fill(pixels.begin(), pixels.end(), 0);
+    late.draw(pixels.data(), width, height, burstOnly, 1, width / 2.f, height / 2.f, 1.0, quietFrame());
+    late.draw(pixels.data(), width, height, burstOnly, 1, width / 2.f, height / 2.f, 1.0, steady);
+    check(litCount(pixels) == 0, "a look that opens in silence loses its solar burst");
+}
+
+void testCenterDwindle() {
+    constexpr int width = 64;
+    constexpr int height = 48;
+    const geiss::EffectSet none;
+    auto filled = [&](int mode) {
+        Pixels pixels(static_cast<std::size_t>(width) * height, 200);
+        geiss::EffectLayer layer(1);
+        layer.draw(pixels.data(), width, height, none, mode, 32.f, 24.f, 1.0, quietFrame());
+        return pixels;
+    };
+    const Pixels eight = filled(8);
+    check(eight[24 * width + 32] == 192 && eight[24 * width + 33] == 192 && eight[23 * width + 32] == 192,
+          "mode 8 darkens the center and its neighbors by 0.96");
+    check(eight[24 * width + 34] == 200 && eight[0] == 200, "mode 8 leaves the rest alone");
+    const Pixels twelve = filled(12);
+    check(twelve[0 * width + 31] == 183 && twelve[47 * width + 33] == 183 && twelve[0 * width + 34] == 200,
+          "mode 12 darkens a three-pixel column");
+    const Pixels zoom = filled(25);
+    check(std::all_of(zoom.begin(), zoom.end(), [](std::uint8_t p) { return p == 200; }), "mode 25 leaves the center alone");
+}
+
+void testMode5FollowsNuclide() {
+    geiss::MapParameters map = centeredMap(5);
+    map.nuclide = true;
+    const float with = scaleAt(60, 32, map);
+    map.nuclide = false;
+    const float without = scaleAt(60, 32, map);
+    checkNear(with, map.f2 - map.f1 * (28.f * 10.f / 200.f * 1.7f), 0.01f, "mode 5 with the nuclide falls off with r * 1.7");
+    checkNear(without, map.f2 - map.f1 * std::sqrt(28.f * 10.f / 200.f), 0.01f, "mode 5 without it falls off with sqrt(r)");
+}
+
+void testEngineEffects() {
+    geiss::Engine engine(9);
+    engine.resize(64, 48);
+    geiss::EffectSet hide;
+    hide.hideWaveform = true;
+    engine.setEffects(hide);
+    check(colorSum(engine.tick(1.0 / 30.0, beatFrame(false, 1.f, 0.f))) == 0, "a hidden waveform draws nothing");
+
+    geiss::Engine locked(4);
+    locked.resize(64, 48);
+    locked.setLocked(true);
+    const geiss::EffectSet held = locked.effects();
+    for (int i = 0; i < 300; ++i) {
+        locked.tick(0.1, beatFrame(false, 1.f, 0.f));
+    }
+    check(locked.effects().on == held.on, "lock holds the effects");
+
+    geiss::Engine next(4);
+    next.resize(64, 48);
+    bool changed = false;
+    const geiss::EffectSet first = next.effects();
+    for (int i = 0; i < 20 && !changed; ++i) {
+        next.nextVisual();
+        changed = next.effects().on != first.on;
+    }
+    check(changed, "Next picks new effects");
+
+    bool nuclideMatches = true;
+    for (int i = 0; i < 300; ++i) {
+        next.nextVisual();
+        nuclideMatches = nuclideMatches && next.map().nuclide == next.effects().has(geiss::Effect::Nuclide);
+    }
+    check(nuclideMatches, "the map knows whether its look has the nuclide");
+}
+
 }  // namespace
 
 int main() {  // NOLINT(bugprone-exception-escape): a test may abort on a failed allocation
@@ -830,6 +1154,13 @@ int main() {  // NOLINT(bugprone-exception-escape): a test may abort on a failed
     testDitherParity();
     testTallFrameKeepsScalesPositive();
     testRandomLeavesZero();
+    testModeEffectsTable();
+    testRandomEffectsRespectLimits();
+    testEachEffectDraws();
+    testNuclide();
+    testCenterDwindle();
+    testMode5FollowsNuclide();
+    testEngineEffects();
     if (failures != 0) {
         std::cerr << failures << " failed\n";
         return EXIT_FAILURE;
