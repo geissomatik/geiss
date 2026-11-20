@@ -33,10 +33,13 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "geiss/audio.hpp"
+#include "geiss/beat.hpp"
 #include "geiss/engine.hpp"
 #include "geiss/map.hpp"
 
+#include <algorithm>
 #include <cmath>
+#include <numbers>
 #include <cstdlib>
 #include <iostream>
 #include <vector>
@@ -180,6 +183,189 @@ void testEnginePauseDrawsALine() {
     check(same, "pause returns the same picture");
 }
 
+std::vector<float> stereoTone(double frequency, int frames, double sampleRate, float amplitude) {
+    std::vector<float> out(static_cast<std::size_t>(frames) * 2);
+    for (int i = 0; i < frames; ++i) {
+        const auto value = static_cast<float>(amplitude * std::sin(2.0 * std::numbers::pi * frequency * i / sampleRate));
+        out[static_cast<std::size_t>(i) * 2] = value;
+        out[static_cast<std::size_t>(i) * 2 + 1] = value;
+    }
+    return out;
+}
+
+void testBassLevel() {
+    constexpr double rate = 48000;
+    constexpr int frames = 4800;
+    const std::vector<float> low = stereoTone(50, frames, rate, 0.5f);
+    const std::vector<float> high = stereoTone(2000, frames, rate, 0.5f);
+    const float lowLevel = geiss::bassLevel(low.data(), frames, 2, rate, 1.f);
+    const float highLevel = geiss::bassLevel(high.data(), frames, 2, rate, 1.f);
+    check(lowLevel > 0.25f, "a 50 Hz tone passes the bass filter");
+    check(highLevel < lowLevel * 0.02f, "a 2 kHz tone is filtered out");
+    checkNear(geiss::bassLevel(low.data(), frames, 2, rate, 2.f), lowLevel * 2.f, 0.0001f, "gain scales the bass level");
+    checkNear(geiss::bassLevel(nullptr, frames, 2, rate, 1.f), 0.f, 0.f, "no samples has no bass");
+    checkNear(geiss::bassLevel(low.data(), frames, 2, 0, 1.f), 0.f, 0.f, "no sample rate has no bass");
+}
+
+// Bass that hits for 50 ms twice a second, over a quiet floor.
+float kick(double time) {
+    return std::fmod(time, 0.5) < 0.05 ? 0.5f : 0.02f;
+}
+
+struct BeatRun {
+    bool beatModeAtEnd = false;
+    float minBrightness = 1;
+    float maxBrightness = 0;
+};
+
+BeatRun runDetector(float (*bass)(double), double updatesPerSecond, double seconds) {
+    geiss::BeatDetector detector;
+    BeatRun run;
+    const double step = 1.0 / updatesPerSecond;
+    const int updates = static_cast<int>(seconds * updatesPerSecond);
+    for (int i = 0; i < updates; ++i) {
+        const geiss::BeatState state = detector.update(bass(i * step), step);
+        run.beatModeAtEnd = state.beatMode;
+        if (state.beatMode) {
+            run.minBrightness = std::min(run.minBrightness, state.brightness);
+            run.maxBrightness = std::max(run.maxBrightness, state.brightness);
+        } else {
+            check(state.brightness == 1.f, "brightness is full outside beat mode");
+        }
+    }
+    return run;
+}
+
+void testBeatDetector() {
+    const BeatRun kicks = runDetector(kick, 60, 8);
+    check(kicks.beatModeAtEnd, "a steady kick turns beat mode on");
+    check(kicks.minBrightness < 0.1f && kicks.maxBrightness > 0.9f, "beat brightness follows the hits");
+
+    check(runDetector(kick, 120, 8).beatModeAtEnd, "beat mode does not depend on the update rate");
+    check(runDetector(kick, 24, 8).beatModeAtEnd, "beat mode holds at a slow update rate");
+
+    check(!runDetector([](double) { return 0.3f; }, 60, 8).beatModeAtEnd, "steady bass is not a beat");
+    check(!runDetector([](double t) { return kick(t) * 0.01f; }, 60, 8).beatModeAtEnd, "a beat under the gate is ignored");
+
+    geiss::BeatDetector detector;
+    for (int i = 0; i < 120; ++i) {
+        detector.update(0.1f, 1.0 / 60.0);
+    }
+    const geiss::BeatState steady = detector.update(0.1f, 1.0 / 60.0);
+    checkNear(steady.bigBeatRatio, 1.f, 0.01f, "steady bass has a big-beat ratio of 1");
+    const geiss::BeatState jump = detector.update(0.3f, 1.0 / 60.0);
+    check(jump.bigBeatRatio > 1.5f, "a jump in bass is a big beat");
+    geiss::BeatState settled;
+    for (int i = 0; i < 120; ++i) {
+        settled = detector.update(0.3f, 1.0 / 60.0);
+    }
+    checkNear(settled.bigBeatRatio, 1.f, 0.01f, "a louder level that holds is no longer a big beat");
+}
+
+void testSilenceHoldUsesTime() {
+    // Overlapping 2048-frame snapshots, one per 1/60 s, as the app sends them.
+    const std::vector<float> quiet(std::size_t{2048} * 2, 0.f);
+    geiss::PcmBlock block;
+    block.samples = quiet.data();
+    block.frameCount = 2048;
+    block.channels = 2;
+    block.sampleRate = 48000;
+    geiss::Analyzer analyzer;
+    bool silentEarly = false;
+    for (int i = 0; i < 24; ++i) {
+        block.time = 100.0 + i / 60.0;
+        silentEarly = silentEarly || analyzer.analyze(block, 8, 1.f).silent;
+    }
+    check(!silentEarly, "0.4 s of overlapping quiet blocks is not silence yet");
+    bool silentLater = false;
+    for (int i = 24; i < 40; ++i) {
+        block.time = 100.0 + i / 60.0;
+        silentLater = analyzer.analyze(block, 8, 1.f).silent;
+    }
+    check(silentLater, "0.65 s of quiet is silence");
+}
+
+geiss::AudioFrame beatFrame(bool beatMode, float brightness, float ratio) {
+    geiss::AudioFrame audio;
+    audio.level = 0.5f;
+    audio.samples.assign(32, 0.5f);
+    audio.beatMode = beatMode;
+    audio.beatBrightness = brightness;
+    audio.bigBeatRatio = ratio;
+    return audio;
+}
+
+unsigned colorSum(const geiss::FrameView& frame) {
+    unsigned color = 0;
+    const std::size_t pixels = static_cast<std::size_t>(frame.width) * static_cast<std::size_t>(frame.height);
+    for (std::size_t i = 0; i < pixels; ++i) {
+        color += frame.rgba[i * 4] + frame.rgba[i * 4 + 1] + frame.rgba[i * 4 + 2];
+    }
+    return color;
+}
+
+void testBeatBrightness() {
+    geiss::Engine dark(1);
+    dark.resize(32, 24);
+    check(colorSum(dark.tick(1.0 / 30.0, beatFrame(true, 0.f, 0.f))) == 0, "a beat-mode gap draws no line");
+
+    geiss::Engine lit(1);
+    lit.resize(32, 24);
+    check(colorSum(lit.tick(1.0 / 30.0, beatFrame(true, 1.f, 0.f))) > 0, "a beat-mode hit draws the line");
+}
+
+struct Look {
+    int mode;
+    int wave;
+};
+
+Look lookOf(const geiss::Engine& engine) {
+    return {engine.mapMode(), engine.waveform()};
+}
+
+bool sameLook(Look a, Look b) {
+    return a.mode == b.mode && a.wave == b.wave;
+}
+
+// Seconds of 0.1 s ticks until the look changes, or -1 within `limit`.
+double secondsUntilLookChanges(geiss::Engine& engine, const geiss::AudioFrame& audio, double limit) {
+    const Look start = lookOf(engine);
+    for (int i = 1; i <= static_cast<int>(limit * 10); ++i) {
+        engine.tick(0.1, audio);
+        if (!sameLook(lookOf(engine), start)) {
+            return i * 0.1;
+        }
+    }
+    return -1;
+}
+
+void testLookWaitsForBigBeat() {
+    geiss::Engine plain(1);
+    plain.resize(16, 12);
+    const double withoutBeat = secondsUntilLookChanges(plain, beatFrame(false, 1.f, 0.f), 30);
+    check(withoutBeat > 19.9 && withoutBeat < 20.2, "without a beat the look changes at 20 s");
+
+    geiss::Engine waiting(1);
+    waiting.resize(16, 12);
+    const double noBigBeat = secondsUntilLookChanges(waiting, beatFrame(true, 1.f, 0.5f), 30);
+    check(noBigBeat > 24.9 && noBigBeat < 25.2, "with no big beat the look changes when the 5 s wait ends");
+
+    geiss::Engine hit(1);
+    hit.resize(16, 12);
+    const double bigBeat = secondsUntilLookChanges(hit, beatFrame(true, 1.f, 1.2f), 30);
+    check(bigBeat > 19.9 && bigBeat < 20.2, "a big beat changes the look as soon as it is due");
+
+    geiss::Engine steady(1);
+    steady.resize(16, 12);
+    const double steadyBeat = secondsUntilLookChanges(steady, beatFrame(true, 1.f, 1.05f), 30);
+    check(steadyBeat > 21.0 && steadyBeat < 22.0, "a steady beat lands the change after the threshold relaxes");
+
+    geiss::Engine locked(1);
+    locked.resize(16, 12);
+    locked.setLocked(true);
+    check(secondsUntilLookChanges(locked, beatFrame(true, 1.f, 2.f), 30) < 0, "lock holds the look through big beats");
+}
+
 }  // namespace
 
 int main() {  // NOLINT(bugprone-exception-escape): a test may abort on a failed allocation
@@ -187,6 +373,11 @@ int main() {  // NOLINT(bugprone-exception-escape): a test may abort on a failed
     testWarpDecayAndSample();
     testAnalysis();
     testEnginePauseDrawsALine();
+    testBassLevel();
+    testBeatDetector();
+    testSilenceHoldUsesTime();
+    testBeatBrightness();
+    testLookWaitsForBigBeat();
     if (failures != 0) {
         std::cerr << failures << " failed\n";
         return EXIT_FAILURE;

@@ -114,7 +114,7 @@ The index buffer and hue-cycle palette are unchanged. The window listens to the 
 - The root `CMakeLists.txt` remains the Windows build and does not gain a macOS target.
 - Once the project exists, build the app with `xcodebuild`. Test analysis and map math with a small C++ executable that uses assertions. The Xcode project is checked in.
 - Ported algorithm files keep the Geiss copyright and 3-Clause BSD notice. The SwiftUI shell is separate new code.
-- Add unit tests for portable visualization and audio-analysis logic. Check system permission behavior and live rendering manually. Add an automated test when a behavior is stable and testable. Screenshot comparison is not the quality gate.
+- Add unit tests for all new portable visualization and audio-analysis code in the same change. Check system permission behavior and live rendering manually. Add an automated test when a behavior is stable and testable. Screenshot comparison is not the quality gate.
 - Use the existing C++ style only inside preserved legacy files. Use current Swift conventions for new app code. New C++ is a modern portable subset.
 - Keep platform APIs at the edges: capture, the bridge, and SwiftUI.
 - Name the original function a ported routine follows. Note intentional visual differences beside that code.

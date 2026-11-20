@@ -47,7 +47,8 @@ Still ahead: the horizontal slide shift on beats, the remaining map modes and wa
 ## Working approach
 
 - During brainstorming and specification work, do not implement application code unless the user explicitly asks to begin implementation.
-- Keep changes focused on the requested task. Do not add tests unless asked.
+- Keep changes focused on the requested task.
+- Always add tests for new code in the same change. Engine code gets assertions in `engine/tests/`. App, bridge, and capture code without an automated test harness gets a manual check in the PR description instead, until such a harness exists.
 - Before every commit, build and run the engine tests (see [`macos/README.md`](macos/README.md)) and commit only when they pass.
 - After changing the app, build it and launch it so the user can test it by hand.
 - Keep `engine/`, the Objective-C++ bridge, and `macos/` clean under the pre-commit hooks (`pre-commit run --all-files`): clang-tidy per [`.clang-tidy`](.clang-tidy) and SwiftLint per [`.swiftlint.yml`](.swiftlint.yml). Fix findings rather than adding `NOLINT`, unless the check is wrong for that line, and say why in the comment. The legacy Windows sources are not linted.
