@@ -1,0 +1,20 @@
+# clang-tidy settings for the portable engine and the macOS bridge.
+# The original Win32 sources in the repo root are not linted.
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-signed-bitwise,
+  -bugprone-incorrect-roundings,
+  clang-analyzer-*,
+  performance-*,
+  portability-*,
+  -portability-avoid-pragma-once,
+  modernize-use-nullptr,
+  modernize-use-override,
+  modernize-use-using,
+  modernize-use-emplace,
+  modernize-loop-convert
+# Any finding fails the pre-commit hook.
+WarningsAsErrors: '*'
+HeaderFilterRegex: '(engine|macos)/'

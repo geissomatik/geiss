@@ -143,7 +143,7 @@ void plot(std::uint8_t* indices, int width, int height, int x, int y, int bright
     if (x < 0 || y < 0 || x >= width || y >= height) {
         return;
     }
-    std::uint8_t& pixel = indices[static_cast<std::size_t>(y * width + x)];
+    std::uint8_t& pixel = indices[static_cast<std::size_t>(y) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x)];
     if (pixel < static_cast<std::uint8_t>(bright)) {
         pixel = static_cast<std::uint8_t>(bright);
     }
@@ -299,7 +299,7 @@ void Engine::expandPalette(const std::uint8_t* indices) {
     palette[0] = 0;
     palette[1] = 0;
     palette[2] = 0;
-    for (int i = 1; i < 256; ++i) {
+    for (std::size_t i = 1; i < 256; ++i) {
         const float value = static_cast<float>(i) / 255.f;
         // One hue cycle. Low indices stay dark so the warp fades toward black.
         // Intentional difference: this is not the original palette generator.
@@ -307,7 +307,7 @@ void Engine::expandPalette(const std::uint8_t* indices) {
     }
     const std::size_t count = static_cast<std::size_t>(width_) * static_cast<std::size_t>(height_);
     for (std::size_t i = 0; i < count; ++i) {
-        const int index = indices[i];
+        const std::size_t index = indices[i];
         rgba_[i * 4] = palette[index * 3];
         rgba_[i * 4 + 1] = palette[index * 3 + 1];
         rgba_[i * 4 + 2] = palette[index * 3 + 2];
