@@ -364,6 +364,7 @@ void Engine::resize(int width, int height) {
     back_.assign(count, 0);
     rgba_.assign(count * 4, 0);
     expandPalette(front_.data());
+    effectLayer_.clearTrail();
     rebuildMap();
 }
 

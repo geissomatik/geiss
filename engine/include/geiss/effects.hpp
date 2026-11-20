@@ -90,6 +90,9 @@ public:
     // Starts a new look's effects: clears the dot trail and arms the solar burst.
     void startLook(const EffectSet& effects);
 
+    // Forgets the dot trail. Its positions are pixels, so a resize makes them stale.
+    void clearTrail();
+
     // `frames` is the elapsed time in reference frames (dt * 30). `centerX` and `centerY`
     // are the map center in pixels, and `mode` is the map mode.
     void draw(std::uint8_t* indices, int width, int height, const EffectSet& effects, int mode,

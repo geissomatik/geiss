@@ -1003,6 +1003,22 @@ void testEachEffectDraws() {
     }
     check(onRows, "the grid draws a dot every 1/30 of the width");
     check(litCount(grid) <= (width / spacing + 1) * (height / spacing + 1), "the grid is sparse");
+    // After one frame scrolling left, the column at x = -1 has left and the next one has
+    // come in at the right edge.
+    check(only(Effect::Grid).gridDirection == 1 && grid[width - 1] > 0, "the grid fills the edge it scrolls in from");
+
+    // The dot trail is in pixels, so clearing it leaves only the new dot.
+    geiss::EffectLayer layer(3);
+    const geiss::EffectSet dotsOnly = only(Effect::Dots);
+    layer.startLook(dotsOnly);
+    Pixels large(static_cast<std::size_t>(width) * height, 0);
+    for (int i = 0; i < 10; ++i) {
+        layer.draw(large.data(), width, height, dotsOnly, 25, cx, cy, 1.0, quiet);
+    }
+    layer.clearTrail();
+    Pixels small(static_cast<std::size_t>(width / 2) * (height / 2), 0);
+    layer.draw(small.data(), width / 2, height / 2, dotsOnly, 25, cx / 2.f, cy / 2.f, 1.0, quiet);
+    check(litCount(small) == 1, "a cleared trail draws no dots from the old size");
 }
 
 void testNuclide() {

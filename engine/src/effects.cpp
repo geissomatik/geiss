@@ -213,8 +213,10 @@ EffectLayer::EffectLayer(std::uint32_t seed) {
     }
 }
 
+void EffectLayer::clearTrail() { trailFilled_ = 0; }
+
 void EffectLayer::startLook(const EffectSet& effects) {
-    trailFilled_ = 0;
+    clearTrail();
     burstPending_ = effects.solarBurst;
 }
 
@@ -436,8 +438,10 @@ void EffectLayer::grid(const Canvas& canvas, int direction) {
     if (direction == 1) {
         shift = -shift;
     }
+    // One column past the edge, so a column scrolling in from the right is drawn before it
+    // reaches its slot. The original reached it by writing into the next row.
     for (int y = 0; y < canvas.height; y += spacing) {
-        for (int x = 0; x < canvas.width; x += spacing) {
+        for (int x = 0; x < canvas.width + spacing; x += spacing) {
             if (std::uint8_t* p = pixel(canvas.indices, canvas.width, canvas.height, x + shift, y); p != nullptr && *p < bright) {
                 *p = static_cast<std::uint8_t>(bright);
             }

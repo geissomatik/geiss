@@ -182,6 +182,7 @@ The index buffer and hue-cycle palette are unchanged. The window listens to the 
 - Which existing configuration options, beyond the prototype slice, should be preserved, modernized, or left out?
 - Which OS error indicates that system-audio recording permission was denied?
 - Does a tap whose permission is revoked at runtime stop its callbacks, or keep delivering silence?
+- Should silence and denied capture still draw layered effects? As ported, a look without sound keeps at least its mode's minimum effects, and the nuclide drops a random ring about one frame in 12, as the original did. That is busier than the calm visual the launch and permission states call for. Options: keep the original's behavior, thin the effects in silence, or drop them until sound returns.
 - Later decisions: a GPU warp, size and quality settings, presets, multi-display, a menu-bar extra, the screensaver host, sandboxing, and a public name.
 
 ## Existing experience inventory (discussion draft)
