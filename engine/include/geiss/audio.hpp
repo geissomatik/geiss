@@ -64,12 +64,17 @@ struct AudioFrame {
 // Turns PCM into an AudioFrame. The beat flag stays false until a later port.
 // Follows the level-trigger idea in GetWaveData with a simpler rising-edge rotate.
 // The same rotation is applied to the mono, left, and right columns.
+// The silence hold counts the time between blocks, from `PcmBlock::time`, so overlapping
+// blocks and the caller's frame rate do not change it. When the time does not advance,
+// the block's own duration counts instead.
 class Analyzer {
 public:
     AudioFrame analyze(const PcmBlock& block, int columns, float gain);
 
 private:
     double silenceHeld_ = 0;
+    double lastTime_ = 0;
+    bool hasLastTime_ = false;
 };
 
 }  // namespace geiss

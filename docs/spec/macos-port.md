@@ -35,11 +35,11 @@ Build a modernized Geiss visualizer for Apple Silicon Macs. Preserve the recogni
 - Capture with a non-exclusive stereo Core Audio tap of the default output mix (`CATapDescription` and a private aggregate device). Playback continues. Recreate the tap when the default output device changes. If that device tap cannot be created, try one global stereo tap. A failure of both keeps calm motion and shows the settings overlay.
 - `NSAudioCaptureUsageDescription` supplies the system prompt. There is no public preflight API for this permission; the prompt appears when the tap starts.
 - Split the work into three pieces:
-  - Capture, in Swift, copies PCM and returns from the audio callback.
+  - Capture, in Swift, copies PCM and returns from the audio callback. The callback converts the tap's 32-bit float stream to stereo straight into a preallocated ring. It does not allocate, wait on a lock, or log. If the reader is copying from the ring at that moment, the callback drops that block. Other tap formats are reported as a capture failure.
   - Analysis, in portable C++, turns that PCM into one immutable frame: samples, level, peak, beat, silence, and time.
   - The renderer reads only that frame.
 - A stalled consumer keeps the latest frame and drops older audio.
-- The frame carries one mono sample per simulation column, and a left and a right sample on that same grid, resampled from the tap rate into about −1…1. A one-channel block copies its sample into both sides. Level is the RMS of the mono samples. Silence means that level has stayed low for about half a second. One rising-edge alignment rotates the mono, left, and right columns together so the waveform holds in place.
+- The frame carries one mono sample per simulation column, and a left and a right sample on that same grid, resampled from the tap rate into about −1…1. A one-channel block copies its sample into both sides. Level is the RMS of the mono samples. Silence means that level has stayed low for about half a second of wall time, measured between analyzed blocks rather than from their length, because successive snapshots of the ring overlap. One rising-edge alignment rotates the mono, left, and right columns together so the waveform holds in place.
 - The engine runs on the main thread. The capture callback only copies samples.
 - Waveform brightness follows level and sensitivity. The full beat detector waits. The frame may still include a beat flag for later use.
 - The exact OS signal for a denied tap is confirmed during the prototype and recorded here.
@@ -69,6 +69,8 @@ Build a modernized Geiss visualizer for Apple Silicon Macs. Preserve the recogni
 - Waiting for permission, or granted with sound: the visual reacts to audio.
 - Granted and silent: the same motion continues, calm, with no error.
 - Denied, unavailable, or the tap fails: calm motion continues, and an overlay explains the state and opens System Settings. Revoking permission at runtime returns to that overlay.
+- A running tap that delivers no callbacks for three seconds is restarted, and a restart that cannot create the tap shows the overlay. Whether a revoked tap stops its callbacks or keeps delivering silence has not been observed yet. If it delivers silence, the app cannot tell revocation from a quiet Mac, and the picture stays calm without the overlay.
+- Returning to the app retries a failed tap. The overlay stays up during that retry.
 
 ## Prototype milestone
 
@@ -118,6 +120,7 @@ The index buffer and hue-cycle palette are unchanged. The window listens to the 
 
 - Which existing effects and configuration options, beyond the prototype slice, should be preserved, modernized, or left out?
 - Which OS error indicates that system-audio recording permission was denied?
+- Does a tap whose permission is revoked at runtime stop its callbacks, or keep delivering silence?
 - Later decisions: a GPU warp, size and quality settings, presets, multi-display, a menu-bar extra, the screensaver host, sandboxing, and a public name.
 
 ## Existing experience inventory (discussion draft)

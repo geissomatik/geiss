@@ -36,41 +36,44 @@ import SwiftUI
 
 @main
 struct GeissApp: App {
+    // Observed so the Visual menu titles follow pause and lock.
+    @ObservedObject private var model = VisualizerModel.shared
+
     var body: some Scene {
         Window("Geiss", id: "geiss") {
-            VisualizerView(model: .shared)
+            VisualizerView(model: model)
                 .frame(minWidth: 640, minHeight: 360)
         }
         .defaultSize(width: 1280, height: 720)
         .commands {
             CommandGroup(replacing: .appInfo) {
                 Button("About Geiss") {
-                    VisualizerModel.shared.showAbout = true
+                    model.showAbout = true
                 }
             }
             CommandMenu("Visual") {
-                Button(VisualizerModel.shared.paused ? "Resume" : "Pause") {
-                    VisualizerModel.shared.togglePaused()
+                Button(model.paused ? "Resume" : "Pause") {
+                    model.togglePaused()
                 }
                 .keyboardShortcut(.space, modifiers: [])
-                Button(VisualizerModel.shared.locked ? "Unlock" : "Lock") {
-                    VisualizerModel.shared.toggleLocked()
+                Button(model.locked ? "Unlock" : "Lock") {
+                    model.toggleLocked()
                 }
                 .keyboardShortcut("l", modifiers: [])
                 Button("Next Visual") {
-                    VisualizerModel.shared.nextVisual()
+                    model.nextVisual()
                 }
                 .keyboardShortcut("n", modifiers: [])
                 Divider()
                 Button("System Audio") {
-                    VisualizerModel.shared.preview = .system
+                    model.preview = .system
                 }
                 Button("Tone") {
-                    VisualizerModel.shared.preview = .tone
+                    model.preview = .tone
                 }
                 .keyboardShortcut("1", modifiers: [.command])
                 Button("Silence") {
-                    VisualizerModel.shared.preview = .silence
+                    model.preview = .silence
                 }
                 .keyboardShortcut("2", modifiers: [.command])
             }

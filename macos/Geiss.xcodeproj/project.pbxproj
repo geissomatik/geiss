@@ -19,6 +19,7 @@
 		A1000000000000000000001A /* audio.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = audio.cpp; sourceTree = "<group>"; };
 		A1000000000000000000001B /* map.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = map.cpp; sourceTree = "<group>"; };
 		A1000000000000000000001C /* engine.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = engine.cpp; sourceTree = "<group>"; };
+		A10000000000000000000060 /* SampleRing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleRing.swift; sourceTree = "<group>"; };
 		A1000000000000000000001D /* SystemAudioTap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemAudioTap.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -49,6 +50,7 @@
 				A10000000000000000000013 /* VisualizerView.swift */,
 				A10000000000000000000014 /* VisualizerModel.swift */,
 				A10000000000000000000015 /* MetalPresenter.swift */,
+				A10000000000000000000060 /* SampleRing.swift */,
 				A1000000000000000000001D /* SystemAudioTap.swift */,
 				A10000000000000000000016 /* EngineBridge.mm */,
 				A10000000000000000000017 /* EngineBridge.h */,
@@ -131,6 +133,7 @@
 				A10000000000000000000042 /* VisualizerView.swift in Sources */,
 				A10000000000000000000043 /* VisualizerModel.swift in Sources */,
 				A10000000000000000000044 /* MetalPresenter.swift in Sources */,
+				A10000000000000000000061 /* SampleRing.swift in Sources */,
 				A10000000000000000000049 /* SystemAudioTap.swift in Sources */,
 				A10000000000000000000045 /* EngineBridge.mm in Sources */,
 				A10000000000000000000046 /* audio.cpp in Sources */,
@@ -150,6 +153,7 @@
 		A10000000000000000000046 /* audio.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001A /* audio.cpp */; };
 		A10000000000000000000047 /* map.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001B /* map.cpp */; };
 		A10000000000000000000048 /* engine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001C /* engine.cpp */; };
+		A10000000000000000000061 /* SampleRing.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000060 /* SampleRing.swift */; };
 		A10000000000000000000049 /* SystemAudioTap.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001D /* SystemAudioTap.swift */; };
 /* End PBXBuildFile section */
 

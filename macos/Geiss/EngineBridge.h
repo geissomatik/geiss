@@ -40,7 +40,9 @@ NS_ASSUME_NONNULL_BEGIN
 // valid until the next tick or resize.
 @interface GeissBridge : NSObject
 
-- (instancetype)initWithSeed:(uint32_t)seed;
+- (instancetype)init NS_UNAVAILABLE;
++ (instancetype)new NS_UNAVAILABLE;
+- (instancetype)initWithSeed:(uint32_t)seed NS_DESIGNATED_INITIALIZER;
 - (void)setSensitivity:(float)sensitivity;
 - (void)setPaused:(BOOL)paused;
 - (void)setLocked:(BOOL)locked;
