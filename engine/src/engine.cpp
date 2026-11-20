@@ -64,56 +64,6 @@ bool lookMayChange(double overdue, const AudioFrame& audio) {
     return audio.bigBeatRatio > threshold;
 }
 
-// xorshift32 so the engine does not depend on a global rand().
-std::uint32_t nextRandom(std::uint32_t& state) {
-    state ^= state << 13;
-    state ^= state >> 17;
-    state ^= state << 5;
-    return state;
-}
-
-float unit(std::uint32_t& state) {
-    return static_cast<float>(nextRandom(state) >> 8) / static_cast<float>(1u << 24);
-}
-
-struct Look {
-    int mode;
-    int wave;
-};
-
-// Eleven pairs. GenerateChunkOfNewMap rejects mode 24 with waveform 6.
-constexpr Look kLooks[] = {
-    {17, 1}, {17, 2}, {17, 6},
-    {19, 1}, {19, 2}, {19, 6},
-    {24, 1}, {24, 2},
-    {25, 1}, {25, 2}, {25, 6},
-};
-
-MapParameters parametersFor(std::uint32_t& state, int width, int height, int mode) {
-    MapParameters map;
-    map.mode = mode;
-    const float centerX = (static_cast<float>(width) * 0.5f - 1.f) + (unit(state) * 60.f - 30.f);
-    const float centerY = (static_cast<float>(height) * 0.5f - 1.f) + (unit(state) * 30.f - 15.f);
-    map.centerXNorm = centerX / static_cast<float>(width);
-    map.centerYNorm = centerY / static_cast<float>(height);
-    if (mode == 24) {
-        // The mode 24 pixel loop replaces the shared turn with this constant.
-        map.turn = 0.05f;
-    } else {
-        // GenerateChunkOfNewMap for mode >= 17, then multiplied by 0.6, with a random sign.
-        float turn = (0.007f + 0.02f * unit(state)) * 0.6f;
-        if (unit(state) < 0.5f) {
-            turn = -turn;
-        }
-        map.turn = turn;
-    }
-    if (mode == 25) {
-        // The source uses the constant 3. The comment's useful range is about 2...6.
-        map.zoom = 2.f + 4.f * unit(state);
-    }
-    return map;
-}
-
 void hsv(float hue, float value, std::uint8_t& r, std::uint8_t& g, std::uint8_t& b) {
     hue = hue - std::floor(hue);
     const float h = hue * 6.f;
@@ -153,6 +103,9 @@ constexpr float kWaveFraction = 0.35f;
 // RenderWave waveform 6 uses sin(intframe * 0.01). At the 30 fps reference that is sin(t * 0.3).
 constexpr float kScopeAngleRate = 0.3f;
 constexpr int kScopePoints = 314;
+// RenderWave waveform 5 blends its first 50 points toward the points after 314, so the circle closes.
+constexpr int kCirclePoints = 314;
+constexpr int kCircleBlend = 50;
 
 float columnSample(const std::vector<float>& samples, int x, int width) {
     if (samples.empty() || width < 2) {
@@ -187,10 +140,11 @@ void plot(std::uint8_t* indices, int width, int height, int x, int y, int bright
 }
 
 // RenderWave waveform 1: one smoothed line, drawn with a max blend.
-// It reads the mono columns and stays on the frame center.
-void drawLine(std::uint8_t* indices, int width, int height, const AudioFrame& audio, int bright) {
+// It reads the mono columns and stays on the frame center. Over mode 10's scroll the
+// original lowered it to three quarters of the height.
+void drawLine(std::uint8_t* indices, int width, int height, const AudioFrame& audio, int bright, int mode) {
     const float amplitude = static_cast<float>(height) * kWaveFraction;
-    const float yCenter = static_cast<float>(height) * 0.5f;
+    const float yCenter = static_cast<float>(height) * (mode == 10 ? 0.75f : 0.5f);
     float previous = columnSample(audio.samples, 0, width) * amplitude + yCenter;
     for (int x = 0; x < width; ++x) {
         const float z = columnSample(audio.samples, x, width) * amplitude + yCenter;
@@ -247,8 +201,71 @@ void drawScope(std::uint8_t* indices, int width, int height, const AudioFrame& a
     }
 }
 
+// RenderWave waveform 3: one smoothed vertical line through the map center. Row y reads
+// the sample of column y, as the original read its buffer by row.
+void drawVerticalLine(std::uint8_t* indices, int width, int height, const AudioFrame& audio,
+                      int bright, float centerXNorm) {
+    const float amplitude = static_cast<float>(height) * kWaveFraction;
+    const float xCenter = centerXNorm * static_cast<float>(width);
+    float previous = columnSample(audio.samples, 0, width) * amplitude + xCenter;
+    for (int y = 0; y < height; ++y) {
+        previous = previous * 0.9f + (columnSample(audio.samples, y, width) * amplitude + xCenter) * 0.1f;
+        plot(indices, width, height, static_cast<int>(previous), y, bright);
+    }
+}
+
+// RenderWave waveform 4: two smoothed diagonal lines at 0.9 of the line amplitude. Left
+// runs down from the top-left corner and right from width - height, both one pixel
+// across per row.
+void drawDiagonals(std::uint8_t* indices, int width, int height, const AudioFrame& audio, int bright) {
+    const float amplitude = static_cast<float>(height) * kWaveFraction * 0.9f;
+    const std::vector<float>& left = audio.left.empty() ? audio.samples : audio.left;
+    const std::vector<float>& right = audio.right.empty() ? left : audio.right;
+    float previousLeft = columnSample(left, 0, width) * amplitude;
+    float previousRight = columnSample(right, 0, width) * amplitude;
+    for (int y = 0; y < height; ++y) {
+        previousLeft = previousLeft * 0.9f + columnSample(left, y, width) * amplitude * 0.1f;
+        previousRight = previousRight * 0.9f + columnSample(right, y, width) * amplitude * 0.1f;
+        plot(indices, width, height, static_cast<int>(previousLeft) + y, y, bright);
+        plot(indices, width, height, static_cast<int>(previousRight) + y + (width - height), y, bright);
+    }
+}
+
+// RenderWave waveform 5: a circle around the map center whose radius follows the mono
+// wave at 0.7 of the line amplitude. The base radius is 60 pixels on a 640-wide frame,
+// and points closer than 5 (at 640) to the center are skipped.
+// Intentional difference: like waveform 6, the 364 points cover the whole column wave
+// instead of the first 364 frames of the capture buffer.
+void drawCircle(std::uint8_t* indices, int width, int height, const AudioFrame& audio,
+                int bright, float centerXNorm, float centerYNorm) {
+    const float amplitude = static_cast<float>(height) * kWaveFraction * 0.7f;
+    const float toPixels = static_cast<float>(width) / 640.f;
+    const float baseRadius = 60.f * toPixels;
+    const float centerX = centerXNorm * static_cast<float>(width);
+    const float centerY = centerYNorm * static_cast<float>(height);
+    constexpr int span = kCirclePoints + kCircleBlend;
+    auto sampleAt = [&](int point) {
+        return columnSample(audio.samples, point * (width - 1) / (span - 1), width);
+    };
+    float radius = baseRadius + sampleAt(0) * amplitude;
+    for (int i = 0; i < kCirclePoints; ++i) {
+        float sample = sampleAt(i);
+        if (i < kCircleBlend) {
+            const float blend = static_cast<float>(i) / static_cast<float>(kCircleBlend);
+            sample = sample * blend + sampleAt(i + kCirclePoints) * (1.f - blend);
+        }
+        radius = radius * 0.5f + 0.5f * (baseRadius + sample * amplitude);
+        if (radius < 5.f * toPixels) {
+            continue;
+        }
+        const float angle = static_cast<float>(i) * 0.02f;
+        plot(indices, width, height, static_cast<int>(centerX + radius * std::cos(angle)),
+             static_cast<int>(centerY + radius * std::sin(angle)), bright);
+    }
+}
+
 void drawWaveform(std::uint8_t* indices, int width, int height, const AudioFrame& audio,
-                  int waveform, float centerXNorm, float centerYNorm, float motionTime) {
+                  int waveform, int mode, float centerXNorm, float centerYNorm, float motionTime) {
     if (indices == nullptr || audio.silent || audio.samples.empty() || width < 2 || height < 2) {
         return;
     }
@@ -259,18 +276,60 @@ void drawWaveform(std::uint8_t* indices, int width, int height, const AudioFrame
     if (bright < 1) {
         return;
     }
-    if (waveform == 2) {
-        drawTwoLines(indices, width, height, audio, bright, centerYNorm);
-    } else if (waveform == 6) {
-        drawScope(indices, width, height, audio, bright, centerXNorm, centerYNorm, motionTime);
-    } else {
-        drawLine(indices, width, height, audio, bright);
+    switch (waveform) {
+        case 2:
+            drawTwoLines(indices, width, height, audio, bright, centerYNorm);
+            break;
+        case 3:
+            drawVerticalLine(indices, width, height, audio, bright, centerXNorm);
+            break;
+        case 4:
+            drawDiagonals(indices, width, height, audio, bright);
+            break;
+        case 5:
+            drawCircle(indices, width, height, audio, bright, centerXNorm, centerYNorm);
+            break;
+        case 6:
+            drawScope(indices, width, height, audio, bright, centerXNorm, centerYNorm, motionTime);
+            break;
+        default:
+            drawLine(indices, width, height, audio, bright, mode);
+            break;
     }
 }
 
 }  // namespace
 
-Engine::Engine(std::uint32_t seed) : rngState_(seed == 0 ? 1u : seed) {
+bool lookAllowed(int mode, int waveform) {
+    if (mode < kFirstMapMode || mode > kLastMapMode || waveform < kFirstWaveform || waveform > kLastWaveform) {
+        return false;
+    }
+    // The pairs GenerateChunkOfNewMap re-rolls.
+    return !((mode == 6 && waveform == 5) ||
+             (mode == 12 && (waveform == 4 || waveform == 6)) ||
+             (mode == 14 && (waveform == 3 || waveform == 4)) ||
+             ((mode == 8 || mode == 23 || mode == 24) && waveform == 6));
+}
+
+Look randomLook(Random& random) {
+    // FX_Pick_Random_Mode: uniform, then a 1-in-25 chance each of fuzzy (7) and super-perspective (5).
+    Look look;
+    look.mode = kFirstMapMode + random.below(kLastMapMode);
+    if (random.below(25) == 0) {
+        look.mode = 7;
+    }
+    if (random.below(25) == 0) {
+        look.mode = 5;
+    }
+    // (rand() % (NUM_WAVES*3 - 1)) / 3 + 1: waveforms 1...5 at 3/17 each and 6 at 2/17.
+    do {
+        look.waveform = random.below(kLastWaveform * 3 - 1) / 3 + 1;
+    } while (!lookAllowed(look.mode, look.waveform));
+    return look;
+}
+
+Engine::Engine(std::uint32_t seed) {
+    random_.state = seed == 0 ? 1u : seed;
     resize(960, 540);
 }
 
@@ -313,21 +372,13 @@ void Engine::pickLook() {
     if (width_ < 2 || height_ < 2) {
         return;
     }
-    Look choices[sizeof(kLooks) / sizeof(kLooks[0])];
-    int count = 0;
-    for (const Look& look : kLooks) {
-        if (look.mode == mapParameters_.mode && look.wave == waveform_) {
-            continue;
-        }
-        choices[count] = look;
-        ++count;
+    // Next and the timer always change the look, so the current pair is drawn again.
+    Look picked = randomLook(random_);
+    while (picked.mode == mapParameters_.mode && picked.waveform == waveform_) {
+        picked = randomLook(random_);
     }
-    if (count < 1) {
-        return;
-    }
-    const Look picked = choices[nextRandom(rngState_) % static_cast<std::uint32_t>(count)];
-    mapParameters_ = parametersFor(rngState_, width_, height_, picked.mode);
-    waveform_ = picked.wave;
+    mapParameters_ = randomMapParameters(picked.mode, width_, height_, random_);
+    waveform_ = picked.waveform;
 }
 
 void Engine::nextVisual() {
@@ -399,11 +450,13 @@ FrameView Engine::tick(double dt, const AudioFrame& audio) {
     }
 
     motionTime_ += dt;
-    const float step = static_cast<float>(std::min(dt * kReferenceFps, 1.0));
-    const float perReferenceFrame = static_cast<float>(weightNumerator(width_, height_)) / 256.f;
+    // Dampened modes move half as far per frame, as mode_motion_dampened did.
+    const float step = static_cast<float>(std::min(dt * kReferenceFps, 1.0)) * mapParameters_.damping;
+    const float perReferenceFrame =
+        static_cast<float>(weightNumerator(width_, height_)) / 256.f * mapParameters_.decay;
     const float decay = static_cast<float>(std::pow(static_cast<double>(perReferenceFrame), dt * kReferenceFps));
     warpIndices(front_.data(), back_.data(), width_, height_, map_.data(), step, decay);
-    drawWaveform(back_.data(), width_, height_, audio, waveform_, mapParameters_.centerXNorm,
+    drawWaveform(back_.data(), width_, height_, audio, waveform_, mapParameters_.mode, mapParameters_.centerXNorm,
                  mapParameters_.centerYNorm, static_cast<float>(motionTime_));
     expandPalette(back_.data());
     front_.swap(back_);

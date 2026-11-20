@@ -39,7 +39,29 @@
 #include <cstddef>
 
 namespace geiss {
+
+std::uint32_t Random::next() {
+    if (state == 0) {
+        state = 0x9E3779B9u;
+    }
+    state ^= state << 13;
+    state ^= state >> 17;
+    state ^= state << 5;
+    return state;
+}
+
+float Random::unit() {
+    return static_cast<float>(next() >> 8) / static_cast<float>(1u << 24);
+}
+
+int Random::below(int count) {
+    return count > 0 ? static_cast<int>(next() % static_cast<std::uint32_t>(count)) : 0;
+}
+
 namespace {
+
+// The original tuned modes 1...16 in pixels on a 640-wide frame (rmult = 640 / FXW).
+constexpr float kReferenceWidth = 640.f;
 
 float wrapX(float value, int width) {
     const float span = static_cast<float>(width - 1);
@@ -53,122 +75,376 @@ float wrapX(float value, int width) {
     return wrapped;
 }
 
-// GenerateChunkOfNewMap for mode >= 17 normalizes by width, then rotates and scales.
-struct Plane {
-    float nx = 0;
-    float ny = 0;
-    float centerX = 0;
-    float centerY = 0;
-    float halfWidth = 0;
-};
-
-// The offset uses the width for both axes, as in GenerateChunkOfNewMap. Height places the center.
-Plane planeAt(int x, int y, int width, int height, float centerXNorm, float centerYNorm) {
-    Plane plane;
-    plane.centerX = centerXNorm * static_cast<float>(width);
-    plane.centerY = centerYNorm * static_cast<float>(height);
-    const float invWidth = 2.f / static_cast<float>(width);
-    plane.nx = (static_cast<float>(x) - plane.centerX) * invWidth;
-    plane.ny = (static_cast<float>(y) - plane.centerY) * invWidth;
-    plane.halfWidth = 0.5f * static_cast<float>(width);
-    return plane;
-}
-
-// cos and sin of the map's turn. The turn is fixed for a whole map, so buildMap computes it once.
+// cos and sin of a turn. The turns are fixed for a whole map, so buildMap computes them once.
 struct Rotation {
     float cosine = 1;
     float sine = 0;
 };
 
-// Mode 24's pixel loop replaces the shared turn with 0.05.
+Rotation rotationOf(float turn) {
+    return Rotation{std::cos(turn), std::sin(turn)};
+}
+
+// Mode 24's pixel loop replaces the shared turn with 0.05, so the original's random
+// rotation direction does not reach it and every fast swirl turns the same way.
 float effectiveTurn(const MapParameters& map) {
     return map.mode == 24 ? 0.05f : map.turn;
 }
 
-Rotation rotationFor(const MapParameters& map) {
-    const float turn = effectiveTurn(map);
-    return Rotation{std::cos(turn), std::sin(turn)};
+struct Rotations {
+    Rotation first;
+    Rotation second;
+};
+
+Rotations rotationsFor(const MapParameters& map) {
+    return Rotations{rotationOf(effectiveTurn(map)), rotationOf(map.turn2)};
 }
 
-SourcePoint place(const Plane& plane, float scale, const Rotation& rotation) {
-    const float rx = plane.nx * rotation.cosine - plane.ny * rotation.sine;
-    const float ry = plane.nx * rotation.sine + plane.ny * rotation.cosine;
-    SourcePoint point;
-    point.x = rx * scale * plane.halfWidth + plane.centerX;
-    point.y = ry * scale * plane.halfWidth + plane.centerY;
-    return point;
+// One pixel relative to the map center. The original's newx2 and newy2.
+struct Offset {
+    float centerX = 0;
+    float centerY = 0;
+    float dx = 0;
+    float dy = 0;
+    // Length on the 640-wide reference.
+    float r640 = 0;
+    // dx and dy times 2 / width, for modes 17 and up.
+    float nx = 0;
+    float ny = 0;
+};
+
+Offset offsetAt(int x, int y, int width, int height, const MapParameters& map) {
+    Offset offset;
+    offset.centerX = map.centerXNorm * static_cast<float>(width);
+    offset.centerY = map.centerYNorm * static_cast<float>(height);
+    offset.dx = static_cast<float>(x) - offset.centerX;
+    offset.dy = static_cast<float>(y) - offset.centerY;
+    const float toReference = kReferenceWidth / static_cast<float>(width);
+    offset.r640 = std::sqrt(offset.dx * offset.dx + offset.dy * offset.dy) * toReference;
+    const float toUnit = 2.f / static_cast<float>(width);
+    offset.nx = offset.dx * toUnit;
+    offset.ny = offset.dy * toUnit;
+    return offset;
 }
 
-SourcePoint zoomSource(int x, int y, int width, int height, const MapParameters& map,
-                       const Rotation& rotation) {
-    SourcePoint point;
-    point.x = static_cast<float>(x);
-    point.y = static_cast<float>(y);
-    if (width < 2 || height < 2) {
-        return point;
-    }
-
-    const Plane plane = planeAt(x, y, width, height, map.centerXNorm, map.centerYNorm);
-    const float radius = std::sqrt(plane.nx * plane.nx + plane.ny * plane.ny);
-    const float zoom = std::max(map.zoom, 0.001f);
-    return place(plane, zoom / (zoom + radius), rotation);
+SourcePoint place(const Offset& offset, float scale, const Rotation& rotation) {
+    const float rx = offset.dx * rotation.cosine - offset.dy * rotation.sine;
+    const float ry = offset.dx * rotation.sine + offset.dy * rotation.cosine;
+    return SourcePoint{rx * scale + offset.centerX, ry * scale + offset.centerY};
 }
 
-SourcePoint sourceAt(int x, int y, int width, int height, const MapParameters& map,
-                     const Rotation& rotation) {
-    if (map.mode != 17 && map.mode != 19 && map.mode != 24) {
-        return zoomSource(x, y, width, height, map, rotation);
-    }
-    SourcePoint point;
-    point.x = static_cast<float>(x);
-    point.y = static_cast<float>(y);
-    if (width < 2 || height < 2) {
-        return point;
-    }
-
-    const Plane plane = planeAt(x, y, width, height, map.centerXNorm, map.centerYNorm);
-    float scale = 0.96f;
-    if (map.mode == 17) {
-        // Horizontal tunnel. The source comment's ranges are 0.96...0.98 and 0.30...0.45.
-        // The running formula uses these two constants.
-        scale = 0.97f - plane.ny * plane.ny * 0.40f;
-    } else if (map.mode == 19) {
-        // Vortex. The source comment's ranges are 1.03...1.05 and 0.15...0.30.
-        scale = 1.04f - 0.25f * std::sqrt(plane.nx * plane.nx + plane.ny * plane.ny);
-    }
-    // Mode 24 is the fast swirl: scale 0.96 and turn 0.05. The comment's ranges are
-    // 0.95...0.97 and 0.04...0.06. The running formula uses these constants.
-    return place(plane, scale, rotation);
+// Mode 7's jitter: 0...0.0495 in steps of 0.0005, like rand_array's (rand()%100)*0.0005.
+float jitter(int x, int y, std::uint32_t seed) {
+    std::uint32_t hash = seed ^ (static_cast<std::uint32_t>(x) * 0x9E3779B1u) ^ (static_cast<std::uint32_t>(y) * 0x85EBCA77u);
+    hash ^= hash >> 15;
+    hash *= 0x2C1B3C6Du;
+    hash ^= hash >> 12;
+    return static_cast<float>(hash % 100u) * 0.0005f;
 }
 
-template <typename Source>
-void fillMap(std::vector<SourcePoint>& out, int width, int height, Source source) {
-    out.resize(static_cast<std::size_t>(width) * static_cast<std::size_t>(height));
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            out[static_cast<std::size_t>(y) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x)] = source(x, y);
+// Mode 6: each push center adds a push or a swirl weighted by 1 / (distance^2 + 0.1),
+// and the sum is normalized to 1.9 pixels. Distances and the move use the 640-wide
+// reference, so the field looks the same at any simulation size.
+SourcePoint vortexSource(int x, int y, int width, int height, const MapParameters& map) {
+    const float toReference = kReferenceWidth / static_cast<float>(width);
+    float tx = 0;
+    float ty = 0;
+    float total = 0;
+    for (const VortexPush& push : map.pushes) {
+        const float px = (push.xNorm * static_cast<float>(width) - static_cast<float>(x)) * toReference;
+        const float py = (push.yNorm * static_cast<float>(height) - static_cast<float>(y)) * toReference;
+        const float squared = px * px + py * py;
+        float weight = 1.f / (squared + 0.1f);
+        total += weight;
+        if (push.type == 0) {
+            tx += push.dirX * weight;
+            ty += push.dirY * weight;
+            continue;
+        }
+        const float inverseLength = 1.f / (std::sqrt(squared) + 0.01f);
+        weight += weight;
+        const float sign = push.type == 1 ? 1.f : -1.f;
+        tx += weight * -py * inverseLength * sign;
+        ty += weight * px * inverseLength * sign;
+    }
+    if (total > 0.000001f) {
+        const float normalize = 1.9f / total;
+        tx *= normalize;
+        ty *= normalize;
+    } else {
+        tx = 0;
+        ty = 0;
+    }
+    const float fromReference = 1.f / toReference;
+    return SourcePoint{static_cast<float>(x) + (tx - 0.1f) * fromReference,
+                       static_cast<float>(y) + (ty + 0.6f) * fromReference};
+}
+
+// Mode 12: columns away from the centerline read from much closer to it, so the picture
+// streaks sideways out of the middle. Offsets use the 640-wide reference.
+SourcePoint splitterSource(const Offset& offset, int width) {
+    const float toReference = kReferenceWidth / static_cast<float>(width);
+    const float dx = offset.dx * toReference;
+    float source = 0;
+    if (dx < -0.5f) {
+        source = -std::sqrt(-dx) + 0.9f;
+    } else if (dx > 0.5f) {
+        source = std::sqrt(dx) - 0.9f;
+    }
+    return SourcePoint{offset.centerX + source / toReference, offset.centerY + offset.dy};
+}
+
+// Modes 1...16 that compute one scale per pixel. Dither modes pick a rotation by parity.
+float lowModeScale(const Offset& offset, int height, int x, int y, const MapParameters& map) {
+    const float r = offset.r640;
+    switch (map.mode) {
+        case 3:
+            return 0.95f - offset.dy * (480.f / static_cast<float>(height)) * 0.0005f;
+        case 4:
+            return 0.9f + r * 0.0025f * 0.14f;
+        case 5:
+            // The original took sqrt(r) only while the nuclide effect was unavailable (-1);
+            // otherwise it used r * 1.7, which is the branch it normally ran.
+            return map.f2 - map.f1 * (r / 200.f * 1.7f);
+        case 7:
+            // Tall frames reach radii the 640x480 original never did, where f1 - r*f2
+            // would turn negative and flip the corners. The scale stops at 0.
+            return std::max(map.f1 - r * map.f2, 0.f) + jitter(x, y, map.noiseSeed);
+        case 8:
+            return 0.85f + 0.1f * std::sin(std::sqrt(r) * map.f1);
+        case 9:
+            // Stops at 0 on tall frames, as mode 7 does.
+            return std::max(map.f1 - r * map.f2, 0.f);
+        case 13: {
+            const float scale = 1.04f - r * std::sqrt(r) * 0.00025f * 0.14f;
+            return (scale - 1.f) * map.f1 + 1.f;
+        }
+        case 14:
+            // The original added under 1/1024 of jitter to the height. It is left out.
+            return 0.9f + 0.2f * std::cos(offset.dy * 12.f / static_cast<float>(height));
+        case 15:
+            return map.f2 + map.f3 * std::sin(std::atan2(offset.dy, offset.dx) * map.f1);
+        case 16:
+            return std::max(1.05f - r * r * 0.00025f * 0.09f, -1.5f);
+        default:
+            // Modes 1, 2, and 11 use the map's constant scale.
+            return map.scale;
+    }
+}
+
+float highModeScale(const Offset& offset, const MapParameters& map) {
+    const float nx = offset.nx;
+    const float ny = offset.ny;
+    const float length = std::sqrt(nx * nx + ny * ny);
+    switch (map.mode) {
+        case 17:
+            // Horizontal tunnel. The source comment's ranges are 0.96...0.98 and 0.30...0.45.
+            return 0.97f - ny * ny * 0.40f;
+        case 18:
+            // Vertical tunnel.
+            return 0.97f - nx * nx * 0.40f;
+        case 19:
+            // Vortex. The source comment's ranges are 1.03...1.05 and 0.15...0.30.
+            return 1.04f - 0.25f * length;
+        case 20:
+            // Terra. Above the frame (ny < -1.4) the original took the root of a negative
+            // number; this reads it as zero.
+            return 1.15f - std::sqrt(std::max(ny + 1.4f, 0.f)) * 0.20f;
+        case 21:
+            // Diced cube.
+            return 0.95f - std::floor(std::fabs(nx) * 10.f) * 0.03f - std::floor(std::fabs(ny) * 10.f) * 0.03f;
+        case 22:
+            // Phonic rings.
+            return 0.95f - std::floor(length * 10.f) * 0.04f;
+        case 23:
+            // Fast rings.
+            return 0.95f - static_cast<float>(static_cast<int>(length * 20.f) % 4) * 0.12f;
+        case 24:
+            // Fast swirl. The comment's ranges are 0.95...0.97 and 0.04...0.06.
+            return 0.96f;
+        default: {
+            // Mode 25, the smooth 1/r zoom.
+            const float zoom = std::max(map.zoom, 0.001f);
+            return zoom / (zoom + length);
         }
     }
 }
 
+bool dithers(int mode) {
+    return mode == 1 || mode == 9 || mode == 11;
+}
+
+SourcePoint sourceAt(int x, int y, int width, int height, const MapParameters& map, const Rotations& rotations) {
+    if (width < 2 || height < 2) {
+        return SourcePoint{static_cast<float>(x), static_cast<float>(y)};
+    }
+    if (map.mode == 6) {
+        return vortexSource(x, y, width, height, map);
+    }
+    const Offset offset = offsetAt(x, y, width, height, map);
+    if (map.mode == 10) {
+        // Rows read from 4% further down, and columns stretch away from the center.
+        const float stretch = 1.03f + 0.03f * static_cast<float>(y) / static_cast<float>(height);
+        return SourcePoint{offset.dx * stretch + offset.centerX, static_cast<float>(y) * 1.04f};
+    }
+    if (map.mode == 12) {
+        return splitterSource(offset, width);
+    }
+    if (map.mode >= 17) {
+        return place(offset, highModeScale(offset, map), rotations.first);
+    }
+    if (dithers(map.mode) && (x % 2) != (y % 2)) {
+        return place(offset, map.scale2, rotations.second);
+    }
+    return place(offset, lowModeScale(offset, height, x, y, map), rotations.first);
+}
+
+// Original turn for modes 4, 13, 14, 16, and 17 up: 0.007...0.027.
+float normalTurn(Random& random) {
+    return 0.007f + 0.02f * random.unit();
+}
+
 }  // namespace
 
+MapParameters randomMapParameters(int mode, int width, int height, Random& random) {
+    MapParameters map;
+    map.mode = std::clamp(mode, kFirstMapMode, kLastMapMode);
+    width = std::max(width, 2);
+    height = std::max(height, 2);
+    const float centerX = (static_cast<float>(width) * 0.5f - 1.f) + (random.unit() * 60.f - 30.f);
+    const float centerY = (static_cast<float>(height) * 0.5f - 1.f) + (random.unit() * 30.f - 15.f);
+    map.centerXNorm = centerX / static_cast<float>(width);
+    map.centerYNorm = centerY / static_cast<float>(height);
+
+    // Defaults the original set for every mode before the per-mode overrides.
+    map.f1 = 0.92f + 0.05f * random.unit();
+    map.f2 = 0.0009f + 0.0012f * random.unit();
+    float turn = 0;
+    float turn2 = 0;
+    bool separateTurn2 = false;
+
+    switch (map.mode) {
+        case 1:
+            map.scale = 0.985f - 0.12f * std::pow(random.unit(), 2.f);
+            map.scale2 = map.scale;
+            turn = 0.01f + 0.01f * random.unit();
+            if (map.scale > 0.97f && random.below(3) == 1) {
+                turn = -turn;
+            }
+            break;
+        case 2:
+            map.scale = 1.f + 0.02f * random.unit();
+            turn = 0.02f + 0.07f * random.unit();
+            break;
+        case 3:
+            turn = 0.01f + 0.015f * random.unit();
+            break;
+        case 5:
+            turn = 0.01f + 0.03f * random.unit();
+            map.f1 = 0.05f + 0.05f * random.unit() + 0.07f * random.unit();
+            map.f2 = 0.99f - 0.01f * random.unit() - 0.02f * random.unit();
+            break;
+        case 6:
+            for (VortexPush& push : map.pushes) {
+                push.xNorm = random.unit();
+                push.yNorm = random.unit();
+                const float angle = random.unit() * 6.28f;
+                const float magnitude = 1.f + random.unit() * 0.8f;
+                push.dirX = std::cos(angle) * magnitude;
+                push.dirY = std::sin(angle) * magnitude;
+                push.type = random.below(3);
+            }
+            break;
+        case 7:
+            turn = 0.01f + 0.01f * random.unit();
+            map.f1 = 0.92f + 0.01f * random.unit();
+            map.f2 = 0.0006f + 0.0005f * random.unit();
+            map.noiseSeed = random.next() | 1u;
+            break;
+        case 8: {
+            turn = 0.05f * random.unit();
+            float ripple = random.unit();
+            ripple *= ripple;
+            ripple *= ripple;
+            map.f1 = ripple * 8.f + 1.5f;
+            break;
+        }
+        case 9:
+            // The dithered half keeps scale1's starting value. The original also shrank
+            // it toward 1 above 640 pixels wide; this keeps the 640-wide look.
+            map.scale2 = 0.8f + 0.25f * random.unit();
+            turn = 0.01f + 0.03f * random.unit();
+            map.f1 = 0.98f + 0.01f * random.unit();
+            map.f2 = 0.0009f + 0.0012f * random.unit();
+            break;
+        case 11: {
+            const float scale = 1.008f + 0.008f * random.unit();
+            const float spin = 0.12f + 0.06f * random.unit();
+            map.scale = scale * 0.99f;
+            map.scale2 = scale * 1.01f;
+            turn = spin * -0.6f;
+            turn2 = spin * 0.1f;
+            separateTurn2 = true;
+            break;
+        }
+        case 12:
+            map.decay = 0.98f;
+            break;
+        case 13:
+            turn = normalTurn(random);
+            map.f1 = 0.92f + 0.16f * random.unit();
+            break;
+        case 15:
+            turn = 0.04f * random.unit() + 0.045f * random.unit();
+            map.f1 = static_cast<float>(random.below(5) + 2);
+            map.f2 = 0.92f + 0.06f * random.unit();
+            map.f3 = 0.05f + 0.05f * random.unit();
+            break;
+        case 25:
+            turn = normalTurn(random);
+            // The source uses the constant 3. The comment's useful range is about 2...6.
+            map.zoom = 2.f + 4.f * random.unit();
+            break;
+        default:
+            // Modes 4, 10, 14, 16, and 17...24. Modes 10 and 12 do not turn.
+            turn = normalTurn(random);
+            break;
+    }
+    if (!separateTurn2) {
+        turn2 = turn;
+    }
+    // Every mode then flips its rotation half the time and slows it to 0.6.
+    if (random.below(2) == 1) {
+        turn = -turn;
+        turn2 = -turn2;
+    }
+    map.turn = turn * 0.6f;
+    map.turn2 = turn2 * 0.6f;
+
+    const bool dampened = map.mode <= 16 && map.mode != 3 && map.mode != 6;
+    map.damping = dampened ? 0.5f : 1.f;
+    return map;
+}
+
 SourcePoint mode25Source(int x, int y, int width, int height, const MapParameters& map) {
-    return zoomSource(x, y, width, height, map, rotationFor(map));
+    MapParameters zoom = map;
+    zoom.mode = 25;
+    return sourceAt(x, y, width, height, zoom, rotationsFor(zoom));
 }
 
 SourcePoint mapSource(int x, int y, int width, int height, const MapParameters& map) {
-    return sourceAt(x, y, width, height, map, rotationFor(map));
-}
-
-void buildMode25Map(std::vector<SourcePoint>& out, int width, int height, const MapParameters& map) {
-    const Rotation rotation = rotationFor(map);
-    fillMap(out, width, height, [&](int x, int y) { return zoomSource(x, y, width, height, map, rotation); });
+    return sourceAt(x, y, width, height, map, rotationsFor(map));
 }
 
 void buildMap(std::vector<SourcePoint>& out, int width, int height, const MapParameters& map) {
-    const Rotation rotation = rotationFor(map);
-    fillMap(out, width, height, [&](int x, int y) { return sourceAt(x, y, width, height, map, rotation); });
+    const Rotations rotations = rotationsFor(map);
+    out.resize(static_cast<std::size_t>(width) * static_cast<std::size_t>(height));
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            out[static_cast<std::size_t>(y) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x)] =
+                sourceAt(x, y, width, height, map, rotations);
+        }
+    }
 }
 
 void warpIndices(const std::uint8_t* src, std::uint8_t* dst, int width, int height,
@@ -184,6 +460,8 @@ void warpIndices(const std::uint8_t* src, std::uint8_t* dst, int width, int heig
         for (int x = 0; x < width; ++x) {
             const std::size_t index = static_cast<std::size_t>(y) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x);
             const SourcePoint target = map[index];
+            // Columns wrap around, as the original's newx did (newx += FXW-1 while below 0),
+            // so maps that read past the side edges pull in the opposite edge. Rows clamp.
             const float sx = wrapX(static_cast<float>(x) + (target.x - static_cast<float>(x)) * step, width);
             float sy = static_cast<float>(y) + (target.y - static_cast<float>(y)) * step;
             sy = std::clamp(sy, 0.f, maxY);

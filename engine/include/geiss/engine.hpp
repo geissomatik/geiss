@@ -41,6 +41,22 @@
 
 namespace geiss {
 
+constexpr int kFirstWaveform = 1;
+constexpr int kLastWaveform = 6;
+
+// One map mode and one waveform.
+struct Look {
+    int mode = 25;
+    int waveform = 1;
+};
+
+// False for the map and waveform pairs the original re-rolls, and for unknown numbers.
+bool lookAllowed(int mode, int waveform);
+
+// The original's pick: a uniform mode with extra chances for 7 and 5, and a waveform
+// with 6 less likely, re-rolled until the pair is allowed.
+Look randomLook(Random& random);
+
 struct FrameView {
     const std::uint8_t* rgba = nullptr;
     int width = 0;
@@ -60,6 +76,7 @@ public:
     bool paused() const { return paused_; }
     bool locked() const { return locked_; }
     int mapMode() const { return mapParameters_.mode; }
+    const MapParameters& map() const { return mapParameters_; }
     int waveform() const { return waveform_; }
     int width() const { return width_; }
     int height() const { return height_; }
@@ -84,7 +101,7 @@ private:
     double motionTime_ = 0;
     float phase_ = 0;
     MapParameters mapParameters_{};
-    std::uint32_t rngState_;
+    Random random_;
     std::vector<SourcePoint> map_;
     std::vector<std::uint8_t> front_;
     std::vector<std::uint8_t> back_;
