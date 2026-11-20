@@ -42,6 +42,7 @@
 #include <numbers>
 #include <cstdlib>
 #include <iostream>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -420,6 +421,229 @@ void testWhiteHotPaletteTop() {
     check(whitestPixel(halfEngine.tick(1.0 / 30.0, half)) == 0, "a beat-mode line between hits is not white");
 }
 
+geiss::MapParameters centeredMap(int mode) {
+    geiss::Random random{7};
+    geiss::MapParameters map = geiss::randomMapParameters(mode, 64, 64, random);
+    map.centerXNorm = 0.5f;
+    map.centerYNorm = 0.5f;
+    map.turn = 0;
+    map.turn2 = 0;
+    return map;
+}
+
+// The scale a source point implies for an unrotated map centered at (32, 32).
+float scaleAt(int x, int y, const geiss::MapParameters& map) {
+    const geiss::SourcePoint source = geiss::mapSource(x, y, 64, 64, map);
+    const float dx = static_cast<float>(x) - 32.f;
+    const float dy = static_cast<float>(y) - 32.f;
+    return std::fabs(dx) > std::fabs(dy) ? (source.x - 32.f) / dx : (source.y - 32.f) / dy;
+}
+
+void testEveryModeBuildsAFiniteMap() {
+    for (int mode = geiss::kFirstMapMode; mode <= geiss::kLastMapMode; ++mode) {
+        geiss::Random random{static_cast<std::uint32_t>(mode * 31 + 1)};
+        const geiss::MapParameters map = geiss::randomMapParameters(mode, 96, 54, random);
+        check(map.mode == mode, "random parameters keep the mode");
+        std::vector<geiss::SourcePoint> sources;
+        geiss::buildMap(sources, 96, 54, map);
+        bool finite = sources.size() == static_cast<std::size_t>(96 * 54);
+        for (const geiss::SourcePoint& point : sources) {
+            finite = finite && std::isfinite(point.x) && std::isfinite(point.y) && std::fabs(point.x) < 960.f &&
+                     std::fabs(point.y) < 540.f;
+        }
+        if (!finite) {
+            std::cerr << "mode " << mode << ": ";
+        }
+        check(finite, "every mode builds a finite map near the frame");
+    }
+}
+
+void testModeDampingAndDecay() {
+    for (int mode = geiss::kFirstMapMode; mode <= geiss::kLastMapMode; ++mode) {
+        geiss::Random random{3};
+        const geiss::MapParameters map = geiss::randomMapParameters(mode, 64, 48, random);
+        const bool dampened = mode <= 16 && mode != 3 && mode != 6;
+        checkNear(map.damping, dampened ? 0.5f : 1.f, 0.f, "mode_motion_dampened halves modes 1-16 but 3 and 6");
+        checkNear(map.decay, mode == 12 ? 0.98f : 1.f, 0.f, "only mode 12 fades faster");
+    }
+}
+
+void testNewModeShapes() {
+    // 18 is 17 turned on its side.
+    const geiss::MapParameters horizontal = centeredMap(17);
+    const geiss::MapParameters vertical = centeredMap(18);
+    const geiss::SourcePoint across = geiss::mapSource(40, 20, 64, 64, horizontal);
+    const geiss::SourcePoint down = geiss::mapSource(20, 40, 64, 64, vertical);
+    checkNear(across.x, down.y, 0.001f, "mode 18 is mode 17 transposed (x)");
+    checkNear(across.y, down.x, 0.001f, "mode 18 is mode 17 transposed (y)");
+
+    // 21 is diced: one scale per tenth of the half-width in each direction.
+    const geiss::MapParameters diced = centeredMap(21);
+    checkNear(scaleAt(33, 32, diced), scaleAt(34, 32, diced), 0.0001f, "mode 21 holds its scale within a cell");
+    check(scaleAt(60, 32, diced) < scaleAt(34, 32, diced) - 0.1f, "mode 21 steps its scale between cells");
+
+    // 22 and 23 are rings: 22 steps outward, 23 repeats every four rings.
+    const geiss::MapParameters rings = centeredMap(22);
+    check(scaleAt(36, 32, rings) > scaleAt(60, 32, rings), "mode 22 steps down at each ring");
+    const geiss::MapParameters fastRings = centeredMap(23);
+    checkNear(scaleAt(32 + 1, 32, fastRings), scaleAt(32 + 1 + 13, 32, fastRings), 0.0001f,
+              "mode 23 repeats its rings every four");
+
+    // 20 does not break above the frame, where the original took a negative root.
+    const geiss::MapParameters terra = centeredMap(20);
+    const geiss::SourcePoint top = geiss::mapSource(10, -40, 64, 64, terra);
+    check(std::isfinite(top.x) && std::isfinite(top.y), "mode 20 stays finite above the frame");
+
+    // 15 has f1 petals: the same scale one petal around.
+    geiss::MapParameters petals = centeredMap(15);
+    petals.f1 = 4;
+    const geiss::SourcePoint east = geiss::mapSource(52, 32, 64, 64, petals);
+    const geiss::SourcePoint south = geiss::mapSource(32, 52, 64, 64, petals);
+    checkNear(east.x - 32.f, south.y - 32.f, 0.001f, "mode 15 repeats its scale each petal");
+
+    // 16, the crystal ball, flips far pixels through the center.
+    const geiss::MapParameters ball = centeredMap(16);
+    check(scaleAt(36, 32, ball) > 0.9f, "mode 16 barely moves near the center");
+    check(geiss::mapSource(0, 32, 64, 64, ball).x > 32.f, "mode 16 reads far pixels from the other side");
+
+    // 12 splits sideways: the centerline reads itself, the sides read near the center.
+    const geiss::MapParameters splitter = centeredMap(12);
+    checkNear(geiss::mapSource(32, 10, 64, 64, splitter).x, 32.f, 0.001f, "mode 12 holds the centerline");
+    const geiss::SourcePoint side = geiss::mapSource(60, 10, 64, 64, splitter);
+    check(side.x > 32.f && side.x < 45.f, "mode 12 streaks the sides out of the middle");
+    checkNear(side.y, 10.f, 0.001f, "mode 12 keeps rows");
+
+    // 10 scrolls: rows read from 4% further down.
+    const geiss::MapParameters scroll = centeredMap(10);
+    checkNear(geiss::mapSource(32, 50, 64, 64, scroll).y, 52.f, 0.001f, "mode 10 reads rows from y * 1.04");
+
+    // 6 moves each pixel by its pushes, about 1.9 pixels at 640 wide.
+    geiss::Random vortexRandom{11};
+    const geiss::MapParameters vortex = geiss::randomMapParameters(6, 640, 480, vortexRandom);
+    const geiss::SourcePoint moved = geiss::mapSource(300, 200, 640, 480, vortex);
+    const float distance = std::hypot(moved.x - 300.f, moved.y - 200.f);
+    check(distance > 0.05f && distance < 6.f, "mode 6 moves a pixel a few pixels at 640 wide");
+    geiss::Random wideRandom{11};
+    const geiss::MapParameters wideVortex = geiss::randomMapParameters(6, 1280, 960, wideRandom);
+    const geiss::SourcePoint wideMoved = geiss::mapSource(600, 400, 1280, 960, wideVortex);
+    checkNear(std::hypot(wideMoved.x - 600.f, wideMoved.y - 400.f), distance * 2.f, 0.05f,
+              "mode 6 keeps its look at twice the size");
+
+    // 11 dithers two rotations by pixel parity.
+    geiss::Random swirlRandom{5};
+    const geiss::MapParameters dither = geiss::randomMapParameters(11, 64, 64, swirlRandom);
+    check(std::fabs(dither.turn - dither.turn2) > 0.01f && dither.scale != dither.scale2, "mode 11 has two transforms");
+
+    // 7 is fuzzy: neighbors jitter apart, within 0.05 of scale.
+    const geiss::MapParameters fuzzy = centeredMap(7);
+    float smallest = 1;
+    float largest = 0;
+    for (int x = 50; x < 60; ++x) {
+        const float scale = scaleAt(x, 32, fuzzy) - (fuzzy.f1 - std::fabs(static_cast<float>(x) - 32.f) * 10.f * fuzzy.f2);
+        smallest = std::min(smallest, scale);
+        largest = std::max(largest, scale);
+    }
+    check(smallest >= -0.0001f && largest <= 0.0496f && largest > smallest, "mode 7 jitters each pixel by up to 0.0495");
+
+    // 3 zooms in less toward the bottom.
+    const geiss::MapParameters landing = centeredMap(3);
+    check(scaleAt(32, 10, landing) > scaleAt(32, 54, landing), "mode 3 slows its zoom down the frame");
+}
+
+void testLookPicking() {
+    check(!geiss::lookAllowed(6, 5), "mode 6 never draws waveform 5");
+    check(!geiss::lookAllowed(12, 4) && !geiss::lookAllowed(12, 6), "mode 12 never draws waveforms 4 or 6");
+    check(!geiss::lookAllowed(14, 3) && !geiss::lookAllowed(14, 4), "mode 14 never draws waveforms 3 or 4");
+    check(!geiss::lookAllowed(8, 6) && !geiss::lookAllowed(23, 6) && !geiss::lookAllowed(24, 6),
+          "modes 8, 23, and 24 never draw the oscilloscope");
+    check(geiss::lookAllowed(25, 1) && !geiss::lookAllowed(26, 1) && !geiss::lookAllowed(1, 7), "unknown numbers are not looks");
+
+    constexpr int draws = 50000;
+    std::vector<int> modes(26, 0);
+    std::vector<int> waves(7, 0);
+    geiss::Random random{99};
+    bool allowed = true;
+    for (int i = 0; i < draws; ++i) {
+        const geiss::Look look = geiss::randomLook(random);
+        allowed = allowed && geiss::lookAllowed(look.mode, look.waveform);
+        ++modes[static_cast<std::size_t>(look.mode)];
+        ++waves[static_cast<std::size_t>(look.waveform)];
+    }
+    check(allowed, "a random look is always an allowed pair");
+    bool everyMode = true;
+    for (int mode = 1; mode <= 25; ++mode) {
+        everyMode = everyMode && modes[static_cast<std::size_t>(mode)] > 0;
+    }
+    check(everyMode, "every map mode comes up");
+    check(modes[5] > modes[1] * 3 / 2 && modes[7] > modes[1] * 3 / 2, "modes 5 and 7 come up more often");
+    check(waves[6] < waves[1] && waves[5] > 0 && waves[3] > 0, "waveform 6 comes up less often");
+}
+
+// A fresh engine moved to `waveform` by Next, ticked once with a silent-looking flat wave.
+geiss::Engine engineDrawing(int waveform, int width, int height) {
+    geiss::Engine engine(17);
+    engine.resize(width, height);
+    for (int i = 0; i < 500 && engine.waveform() != waveform; ++i) {
+        engine.nextVisual();
+    }
+    check(engine.waveform() == waveform, "Next reaches every waveform");
+    return engine;
+}
+
+std::vector<std::pair<int, int>> litPixels(const geiss::FrameView& frame) {
+    std::vector<std::pair<int, int>> lit;
+    for (int y = 0; y < frame.height; ++y) {
+        for (int x = 0; x < frame.width; ++x) {
+            const std::size_t i = (static_cast<std::size_t>(y) * static_cast<std::size_t>(frame.width) + static_cast<std::size_t>(x)) * 4;
+            if (frame.rgba[i] + frame.rgba[i + 1] + frame.rgba[i + 2] > 0) {
+                lit.emplace_back(x, y);
+            }
+        }
+    }
+    return lit;
+}
+
+geiss::AudioFrame flatWave(int columns) {
+    geiss::AudioFrame audio = beatFrame(false, 1.f, 0.f);
+    audio.samples.assign(static_cast<std::size_t>(columns), 0.f);
+    audio.left = audio.samples;
+    audio.right = audio.samples;
+    return audio;
+}
+
+void testNewWaveforms() {
+    constexpr int width = 160;
+    constexpr int height = 90;
+
+    geiss::Engine vertical = engineDrawing(3, width, height);
+    const int centerX = static_cast<int>(vertical.map().centerXNorm * width);
+    const auto verticalLit = litPixels(vertical.tick(1.0 / 30.0, flatWave(width)));
+    bool onCenter = !verticalLit.empty();
+    for (const auto& [x, y] : verticalLit) {
+        onCenter = onCenter && x == centerX;
+    }
+    check(onCenter && verticalLit.size() == static_cast<std::size_t>(height), "waveform 3 is one vertical line through the center");
+
+    geiss::Engine diagonal = engineDrawing(4, width, height);
+    const auto diagonalLit = litPixels(diagonal.tick(1.0 / 30.0, flatWave(width)));
+    bool onDiagonals = !diagonalLit.empty();
+    for (const auto& [x, y] : diagonalLit) {
+        onDiagonals = onDiagonals && (x == y || x == y + width - height);
+    }
+    check(onDiagonals && diagonalLit.size() == static_cast<std::size_t>(height) * 2, "waveform 4 is two diagonals");
+
+    geiss::Engine circle = engineDrawing(5, width, height);
+    const float cx = circle.map().centerXNorm * width;
+    const float cy = circle.map().centerYNorm * height;
+    const auto circleLit = litPixels(circle.tick(1.0 / 30.0, flatWave(width)));
+    const float radius = 60.f * width / 640.f;
+    bool onRing = circleLit.size() > 20;
+    for (const auto& [x, y] : circleLit) {
+        onRing = onRing && std::fabs(std::hypot(static_cast<float>(x) - cx, static_cast<float>(y) - cy) - radius) < 2.f;
+    }
+    check(onRing, "waveform 5 is a circle of 60 pixels at 640 wide around the center");
+}
+
 void testLookWaitsForBigBeat() {
     geiss::Engine plain(1);
     plain.resize(16, 12);
@@ -462,6 +686,11 @@ int main() {  // NOLINT(bugprone-exception-escape): a test may abort on a failed
     testVolumeScale();
     testWaveBrightnessFollowsVolume();
     testWhiteHotPaletteTop();
+    testEveryModeBuildsAFiniteMap();
+    testModeDampingAndDecay();
+    testNewModeShapes();
+    testLookPicking();
+    testNewWaveforms();
     if (failures != 0) {
         std::cerr << failures << " failed\n";
         return EXIT_FAILURE;

@@ -84,24 +84,42 @@ Build a modernized Geiss visualizer for Apple Silicon Macs. Preserve the recogni
 
 ## Prototype milestone
 
-The picture is a small set of Geiss maps and waveforms. The warp is unchanged: each frame samples the previous index buffer through the map, darkens it, and draws the waveform.
+The picture has all 25 of the original's map modes and all 6 of its waveforms. The warp is unchanged: each frame samples the previous index buffer through the map, darkens it, and draws the waveform.
 
-Maps, from `GenerateChunkOfNewMap`. `nx` and `ny` are the pixel offset from the map center, times `2 / width`. The source point is the center plus that offset, rotated, scaled, and multiplied by half the width.
+Maps, from `GenerateChunkOfNewMap`. `dx` and `dy` are the pixel offset from the map center. Most modes compute a scale and read from the center plus that offset, rotated by the map's turn and multiplied by the scale. `r640` is the offset's length on a 640-wide frame, as the original's `rmult` made it, so a mode keeps its look at any simulation size. Modes 17 and up use `nx` and `ny`, the offset times `2 / width`.
 
-- Mode 17, a horizontal tunnel. Scale is `0.97 - ny² * 0.40`.
-- Mode 19, a vortex. Scale is `1.04 - 0.25 * length(nx, ny)`.
-- Mode 24, a fast swirl. Scale is `0.96` and the turn is `0.05`. That turn replaces the shared turn.
-- Mode 25, the smooth 1/r zoom. A new zoom still picks its constant from about 2…6.
+- 1: a constant scale of 0.985 − 0.12·u². 2: a constant scale of 1.00…1.02 (outward). 3: `0.95 − dy·(480/H)·0.0005`. 4: a sphere, `0.9 + r640·0.0025·0.14`. 5: super-perspective, `f2 − f1·r640/200·1.7`.
+- 6: a vortex field. Five push centers each push, or swirl one way or the other, weighted by `1 / (d² + 0.1)`, normalized to 1.9 pixels with a small drift. Distances and the move use the 640-wide reference.
+- 7: fuzzy, `f1 − r640·f2` plus a fixed per-pixel jitter of 0…0.0495. 8: ripples, `0.85 + 0.1·sin(√r640·f1)`. 9: petals, `f1 − r640·f2` on even pixels and a constant `scale2` on odd pixels.
+- 10: a scroll. Rows read from `y·1.04`, and columns stretch from the center by `1.03 + 0.03·y/H`. 11: two rotations and scales dithered by pixel parity. 12: a sideways splitter. Columns read from `±√|dx|` near the centerline (on the 640 reference), and the picture fades faster (0.98 per frame).
+- 13: a black hole, `(1.04 − r640^1.5·0.00025·0.14 − 1)·f1 + 1`. 14: a split world, `0.9 + 0.2·cos(dy·12/H)`. 15: petals, `f2 + f3·sin(angle·f1)` with 2…6 petals. 16: a crystal ball, `1.05 − r640²·0.00025·0.09`, at least −1.5, so far pixels read from the other side.
+- 17: a horizontal tunnel, `0.97 − ny²·0.40`. 18: a vertical tunnel, `0.97 − nx²·0.40`. 19: a vortex, `1.04 − 0.25·length`. 20: terra, `1.15 − √(ny + 1.4)·0.20`. 21: diced, `0.95 − ⌊|nx|·10⌋·0.03 − ⌊|ny|·10⌋·0.03`. 22: phonic rings, `0.95 − ⌊length·10⌋·0.04`. 23: fast rings, `0.95 − (⌊length·20⌋ mod 4)·0.12`. 24: a fast swirl, scale 0.96 and turn 0.05. 25: the smooth zoom, `zoom / (zoom + length)` with zoom 2…6.
 
-Center and the shared turn still vary for modes 17, 19, and 25. The per-pixel constants above stay as written in the source.
+Each new map picks its center, turn, and constants as `GenerateChunkOfNewMap` did: per-mode turns, a random rotation direction, and turns scaled by 0.6. Modes 1, 2, 4, 5, and 7…16 move half as far per frame, as `mode_motion_dampened` made them. The original also scaled that by `suggested_damping`, a measure of how much the music was changing; that stays at full here.
 
-Waveforms, from `RenderWave`:
+Intentional differences:
+- The original shrank the motion of modes 5, 7, and 9 above 640 pixels wide (`protective_factor`). Here every mode keeps its 640-wide look at any size.
+- Mode 7's jitter comes from a hash per pixel and map, not the original's shared random table.
+- Mode 14 leaves out a jitter of under 1/1024 in the height.
+- Mode 20 reads a negative root above the frame as zero.
+- Mode 5 always uses the `r·1.7` branch, which is the one the original normally ran.
 
-- Waveform 1, one smoothed line. It reads the mono columns and stays on the frame center.
-- Waveform 2, two smoothed lines. The left line sits 12% of the height above the map center and the right line sits 12% below. Both use 0.7 of the line amplitude.
-- Waveform 6, the X-Y oscilloscope. It plots 314 smoothed stereo points around the map center, spread across the columns, at 1.2 of the line amplitude, rocked by `sin(t * 0.3)`. The original walks the first 314 frames of its capture buffer. Those frames are already one sample per column here, so the points cover that wave.
+Waveforms, from `RenderWave`. A −1…1 sample covers about 35% of the height before each waveform's own scale.
 
-A −1…1 sample still covers about 35% of the height before those waveform scales. Mode 24 is not paired with waveform 6, matching the original rejection of that pair. A new pair is chosen uniformly from the other valid pairs.
+- 1: one smoothed line across the frame center. Over mode 10's scroll it sits at three quarters of the height, as in the original.
+- 2: two smoothed lines, left 12% of the height above the map center and right 12% below, at 0.7 of the amplitude.
+- 3: one smoothed vertical line through the map center. Row y reads the sample of column y.
+- 4: two smoothed diagonal lines at 0.9 of the amplitude, left from the top-left corner and right from `width − height`.
+- 5: a circle around the map center. Its radius is 60 pixels on a 640-wide frame plus the wave at 0.7 of the amplitude. The first 50 points blend toward the points after 314, so the circle closes.
+- 6: the X-Y oscilloscope. It plots 314 smoothed stereo points around the map center at 1.2 of the amplitude, rocked by `sin(t * 0.3)`.
+
+Intentional difference: the original walked the first frames of its capture buffer for waveforms 5 and 6. Here those points spread across the whole column wave.
+
+Picking follows the original:
+- A mode is chosen uniformly from 1…25, then has a 1-in-25 chance each of becoming fuzzy (7) or super-perspective (5).
+- A waveform is chosen with 1…5 at 3/17 each and 6 at 2/17.
+- The waveform is re-chosen while the pair is excluded: mode 6 with waveform 5, mode 12 with waveforms 4 or 6, mode 14 with waveforms 3 or 4, and modes 8, 23, or 24 with waveform 6.
+- Next and the timer always change the pair.
 
 The window opens on mode 25 and waveform 1. Another pair is chosen about every 20 seconds unless the visual is locked. Next chooses one immediately. Pause freezes the picture and that timer. The oscilloscope rock advances while the picture is moving, including while locked, and holds while paused. Chunked background generation waits.
 
@@ -140,7 +158,7 @@ The Windows project has a substantial set of rendering behaviors and options. So
 ### Visual identity and animation
 
 - **Procedural evolving backgrounds/maps:** Geiss creates a new visual map in chunks while the current one is displayed, then transitions to the new map. This evolving, fluid look is central to the identity. Preserve the feedback warp and automatic change of maps. The first build generates each map completely when the visual changes. Preparing the next map in slices waits.
-- **Waveforms:** The project cycles through several waveform styles, including an X-Y oscilloscope mode. Wave shape and amplitude react to the audio. Preserve the recognizable waveform family and audio response. The current picture uses waveform 1 (one smoothed line), waveform 2 (two smoothed lines), and waveform 6 (the X-Y oscilloscope). The other waveforms wait.
+- **Waveforms:** The project cycles through several waveform styles, including an X-Y oscilloscope mode. Wave shape and amplitude react to the audio. Preserve the recognizable waveform family and audio response. All six of the original's waveforms are ported.
 - **Layered effects:** The renderer has optional effects such as chasers, bars, dots, solar-like overlays, grids, nuclide patterns, and shading. Some are selected or varied as part of modes. Preserve the signature effects and their combinations after assessing each for visual quality and cost on modern displays. The prototype leaves these for a later slice.
 - **Automatic variation:** Modes, waveforms, palettes, and effects can change over time. Preserve automatic variety. Pause, lock, and next visual are the first-version controls for that behavior.
 
@@ -168,7 +186,7 @@ The Windows project has a substantial set of rendering behaviors and options. So
 - Automatic variation: visuals evolve on their own. Pause freezes the picture. Lock holds the current map, waveform, and palette while audio motion continues. Next visual advances the look.
 - Initial controls: sensitivity, pause, lock, and next visual.
 - Pixels: portable C++ simulates 8-bit palette indices, then expands them to RGBA8. Metal uploads and scales that buffer.
-- Current picture: map modes 17 (horizontal tunnel), 19 (vortex), 24 (fast swirl), and 25 (smooth 1/r zoom), with waveforms 1 (one line), 2 (two lines), and 6 (X-Y oscilloscope). The window opens on mode 25 and waveform 1. Next and the 20-second timer pick a different pair. Mode 24 is not paired with waveform 6. Lock holds that pair and the palette. Pause freezes the picture. One hue-cycle palette with a white-hot top. Each frame feeds back through the same warp. No new controls. Beats brighten the waveform and land look changes, from a bass-focused detector. The horizontal slide shift waits. Layered effects, chunked map generation, a GPU warp, and the screen saver host wait.
+- Current picture: all 25 original map modes and all 6 waveforms, picked with the original's weights and excluded pairs. The window opens on mode 25 and waveform 1. Next and the 20-second timer pick a different pair. Lock holds that pair and the palette. Pause freezes the picture. One hue-cycle palette with a white-hot top. Each frame feeds back through the same warp. No new controls. Beats brighten the waveform and land look changes, from a bass-focused detector. The horizontal slide shift waits. Layered effects, chunked map generation, a GPU warp, and the screen saver host wait.
 - Launch: the visualizer opens immediately. Denied or failed capture keeps calm motion and shows an overlay that opens System Settings.
 
 ### Choices considered
