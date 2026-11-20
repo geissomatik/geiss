@@ -43,6 +43,11 @@ namespace {
 
 constexpr float kSilenceLevel = 0.01f;
 constexpr double kSilenceHoldSeconds = 0.5;
+// 16-bit peak-to-peak / 256 in the original: a float peak-to-peak times 32768 / 256.
+constexpr float kVolumeScale = 128.f;
+// avg_vol = avg_vol*0.85 + vol*0.15 per frame at 30 fps.
+constexpr double kAverageVolumeRetain = 0.85;
+constexpr double kVolumeWindowSeconds = 1.0 / 30.0;
 
 float downmix(const float* frame, int channels) {
     if (channels <= 1) {
@@ -116,6 +121,20 @@ void rotateFrom(std::vector<float>& samples, int rising) {
     std::rotate(samples.begin(), samples.begin() + rising, samples.end());
 }
 
+// Peak-to-peak of the mono samples over the newest 1/30 s, on the original's volume scale.
+// Intentional difference: the original measured the left channel of its whole capture buffer.
+float volumeOf(const std::vector<float>& mono, double sampleRate) {
+    if (mono.empty()) {
+        return 0.f;
+    }
+    const auto size = static_cast<std::ptrdiff_t>(mono.size());
+    const auto window = sampleRate > 0
+        ? std::clamp(static_cast<std::ptrdiff_t>(sampleRate * kVolumeWindowSeconds), std::ptrdiff_t{1}, size)
+        : size;
+    const auto [low, high] = std::minmax_element(mono.end() - window, mono.end());
+    return (*high - *low) * kVolumeScale;
+}
+
 bool hasAudioBlock(const PcmBlock& block) {
     return block.samples != nullptr && block.frameCount > 0 && block.channels > 0;
 }
@@ -174,6 +193,10 @@ AudioFrame Analyzer::analyze(const PcmBlock& block, int columns, float gain) {
     }
     frame.level = mono.empty() ? 0.f : static_cast<float>(std::sqrt(sum / static_cast<double>(mono.size())));
     frame.peak = peak;
+    frame.volume = volumeOf(mono, block.sampleRate);
+    const auto retain = static_cast<float>(std::pow(kAverageVolumeRetain, elapsed * 30.0));
+    averageVolume_ = averageVolume_ * retain + frame.volume * (1.f - retain);
+    frame.averageVolume = averageVolume_;
 
     frame.samples.assign(static_cast<std::size_t>(columns), 0.f);
     frame.left.assign(static_cast<std::size_t>(columns), 0.f);

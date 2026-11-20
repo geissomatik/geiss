@@ -36,12 +36,12 @@ Build a modernized Geiss visualizer for Apple Silicon Macs. Preserve the recogni
 - `NSAudioCaptureUsageDescription` supplies the system prompt. There is no public preflight API for this permission; the prompt appears when the tap starts.
 - Split the work into three pieces:
   - Capture, in Swift, copies PCM and returns from the audio callback. The callback converts the tap's 32-bit float stream to stereo straight into a preallocated ring. It does not allocate, wait on a lock, or log. If the reader is copying from the ring at that moment, the callback drops that block. Other tap formats are reported as a capture failure.
-  - Analysis, in portable C++, turns that PCM into one immutable frame: samples, level, peak, silence, time, and the beat state (bass, beat mode, beat brightness, and big-beat ratio).
+  - Analysis, in portable C++, turns that PCM into one immutable frame: samples, level, peak, volume and its average, silence, time, and the beat state (bass, beat mode, beat brightness, and big-beat ratio).
   - The renderer reads only that frame.
 - A stalled consumer keeps the latest frame and drops older audio.
 - The frame carries one mono sample per simulation column, and a left and a right sample on that same grid, resampled from the tap rate into about −1…1. A one-channel block copies its sample into both sides. Level is the RMS of the mono samples. Silence means that level has stayed low for about half a second of wall time, measured between analyzed blocks rather than from their length, because successive snapshots of the ring overlap. One rising-edge alignment rotates the mono, left, and right columns together so the waveform holds in place.
 - The engine runs on the main thread. The capture callback only copies samples.
-- Waveform brightness follows level and sensitivity, and beats when a beat is on (see [Beat response](#beat-response)).
+- Waveform brightness follows RenderWave: `base = volume*4 + averageVolume*0.4 - 10`, clamped to 0…155, where volume is the peak-to-peak of the newest 1/30 s on the original's 0…256 scale (after sensitivity) and the average smooths it like `avg_vol`. That range maps onto the full palette, so normal listening levels draw at full brightness and quiet passages dim. Beats scale it further when a beat is on (see [Beat response](#beat-response)).
 
 ### Beat response
 

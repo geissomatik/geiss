@@ -156,6 +156,8 @@ void testEnginePauseDrawsALine() {
     engine.resize(32, 24);
     geiss::AudioFrame audio;
     audio.level = 0.5f;
+    audio.volume = 100.f;
+    audio.averageVolume = 100.f;
     audio.silent = false;
     audio.samples.resize(32);
     for (int i = 0; i < 32; ++i) {
@@ -288,6 +290,8 @@ void testSilenceHoldUsesTime() {
 geiss::AudioFrame beatFrame(bool beatMode, float brightness, float ratio) {
     geiss::AudioFrame audio;
     audio.level = 0.5f;
+    audio.volume = 100.f;
+    audio.averageVolume = 100.f;
     audio.samples.assign(32, 0.5f);
     audio.beatMode = beatMode;
     audio.beatBrightness = brightness;
@@ -339,6 +343,53 @@ double secondsUntilLookChanges(geiss::Engine& engine, const geiss::AudioFrame& a
     return -1;
 }
 
+void testVolumeScale() {
+    constexpr double rate = 48000;
+    const std::vector<float> loud = stereoTone(440, 4800, rate, 1.f);
+    geiss::PcmBlock block;
+    block.samples = loud.data();
+    block.frameCount = 4800;
+    block.channels = 2;
+    block.sampleRate = rate;
+    geiss::Analyzer analyzer;
+    const geiss::AudioFrame full = analyzer.analyze(block, 8, 1.f);
+    checkNear(full.volume, 256.f, 1.f, "a full-scale wave is volume 256, as a 16-bit peak-to-peak / 256");
+    check(full.averageVolume > 0.f && full.averageVolume < full.volume, "the average volume trails a sudden rise");
+    geiss::Analyzer quieter;
+    checkNear(quieter.analyze(block, 8, 0.5f).volume, 128.f, 1.f, "gain scales the volume");
+}
+
+void testWaveBrightnessFollowsVolume() {
+    geiss::AudioFrame quiet = beatFrame(false, 1.f, 0.f);
+    quiet.volume = 10.f;
+    quiet.averageVolume = 10.f;
+    geiss::AudioFrame normal = beatFrame(false, 1.f, 0.f);
+    normal.volume = 50.f;
+    normal.averageVolume = 50.f;
+    geiss::AudioFrame loud = beatFrame(false, 1.f, 0.f);
+    loud.volume = 150.f;
+    loud.averageVolume = 150.f;
+
+    geiss::Engine quietEngine(1);
+    quietEngine.resize(32, 24);
+    geiss::Engine normalEngine(1);
+    normalEngine.resize(32, 24);
+    geiss::Engine loudEngine(1);
+    loudEngine.resize(32, 24);
+    const unsigned quietColor = colorSum(quietEngine.tick(1.0 / 30.0, quiet));
+    const unsigned normalColor = colorSum(normalEngine.tick(1.0 / 30.0, normal));
+    const unsigned loudColor = colorSum(loudEngine.tick(1.0 / 30.0, loud));
+    check(quietColor > 0 && quietColor < normalColor, "a quiet wave is dimmer");
+    check(normalColor == loudColor, "normal listening levels already draw at full brightness");
+
+    geiss::AudioFrame silent = beatFrame(false, 1.f, 0.f);
+    silent.volume = 0.f;
+    silent.averageVolume = 0.f;
+    geiss::Engine silentEngine(1);
+    silentEngine.resize(32, 24);
+    check(colorSum(silentEngine.tick(1.0 / 30.0, silent)) == 0, "no volume draws no line");
+}
+
 void testLookWaitsForBigBeat() {
     geiss::Engine plain(1);
     plain.resize(16, 12);
@@ -378,6 +429,8 @@ int main() {  // NOLINT(bugprone-exception-escape): a test may abort on a failed
     testSilenceHoldUsesTime();
     testBeatBrightness();
     testLookWaitsForBigBeat();
+    testVolumeScale();
+    testWaveBrightnessFollowsVolume();
     if (failures != 0) {
         std::cerr << failures << " failed\n";
         return EXIT_FAILURE;

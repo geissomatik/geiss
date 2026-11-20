@@ -157,6 +157,16 @@ float columnSample(const std::vector<float>& samples, int x, int width) {
     return samples[index];
 }
 
+// RenderWave's plugin brightness: base = current_vol*4 + avg_vol*0.4 - 10, clamped to
+// 0...155. The original then tinted that RGB base up to about 255; here 0...155 maps
+// onto the palette's 0...255 index range, so normal listening levels draw at full brightness.
+constexpr float kBaseCeiling = 155.f;
+
+float waveBrightness(float volume, float averageVolume) {
+    const float base = std::clamp(volume * 4.f + averageVolume * 0.4f - 10.f, 0.f, kBaseCeiling);
+    return base * 255.f / kBaseCeiling;
+}
+
 void plot(std::uint8_t* indices, int width, int height, int x, int y, int bright) {
     if (x < 0 || y < 0 || x >= width || y >= height) {
         return;
@@ -236,8 +246,7 @@ void drawWaveform(std::uint8_t* indices, int width, int height, const AudioFrame
     // Beat-mode brightness follows each hit and goes dark between them. As in the
     // original, the X-Y oscilloscope keeps its steady brightness.
     const float beatScale = audio.beatMode && waveform != 6 ? std::clamp(audio.beatBrightness, 0.f, 1.f) : 1.f;
-    const float steady = std::clamp(40.f + audio.level * 400.f, 40.f, 255.f);
-    const int bright = static_cast<int>(steady * beatScale);
+    const int bright = static_cast<int>(waveBrightness(audio.volume, audio.averageVolume) * beatScale);
     if (bright < 1) {
         return;
     }

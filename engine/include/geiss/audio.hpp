@@ -59,6 +59,11 @@ struct AudioFrame {
     std::vector<float> right;
     float level = 0;
     float peak = 0;
+    // The original's volume scale (16-bit peak-to-peak / 256, so 0...256): peak-to-peak
+    // of the mono samples over the newest 1/30 s, after gain. `averageVolume` smooths it
+    // like avg_vol (0.85 per frame at 30 fps). RenderWave's brightness uses both.
+    float volume = 0;
+    float averageVolume = 0;
     bool silent = false;
     // Bass level and the beat state derived from it. See BeatDetector.
     float bass = 0;
@@ -79,6 +84,7 @@ public:
 
 private:
     BeatDetector beat_;
+    float averageVolume_ = 0;
     double silenceHeld_ = 0;
     double lastTime_ = 0;
     bool hasLastTime_ = false;
