@@ -138,6 +138,15 @@ void hsv(float hue, float value, std::uint8_t& r, std::uint8_t& g, std::uint8_t&
     b = static_cast<std::uint8_t>(std::clamp(bf * value, 0.f, 1.f) * 255.f + 0.5f);
 }
 
+// The top `kWhiteHotSpan` of the palette blends from the hue toward white, eased in.
+// At the original decay rate (about 0.992 per 1/30 s), a trail fades out of it in about 0.7 s.
+constexpr float kWhiteHotSpan = 0.15f;
+
+float whiteHot(float value) {
+    const float t = std::clamp((value - (1.f - kWhiteHotSpan)) / kWhiteHotSpan, 0.f, 1.f);
+    return t * t * (3.f - 2.f * t);
+}
+
 // A -1...1 sample covers about 35% of the height. The original scaled 16-bit capture
 // by volscale. That constant waits until real tap levels are known.
 constexpr float kWaveFraction = 0.35f;
@@ -340,7 +349,15 @@ void Engine::expandPalette(const std::uint8_t* indices) {
         const float value = static_cast<float>(i) / 255.f;
         // One hue cycle. Low indices stay dark so the warp fades toward black.
         // Intentional difference: this is not the original palette generator.
-        hsv(phase_ + 0.08f * value, value, palette[i * 3], palette[i * 3 + 1], palette[i * 3 + 2]);
+        std::uint8_t* color = &palette[i * 3];
+        hsv(phase_ + 0.08f * value, value, color[0], color[1], color[2]);
+        // The top of the palette turns white-hot, so a freshly drawn full-brightness line,
+        // such as a beat hit, stands out from the decaying trails around it.
+        const float white = whiteHot(value);
+        for (std::size_t channel = 0; channel < 3; ++channel) {
+            const float hue = static_cast<float>(color[channel]);
+            color[channel] = static_cast<std::uint8_t>(hue + (255.f * value - hue) * white + 0.5f);
+        }
     }
     const std::size_t count = static_cast<std::size_t>(width_) * static_cast<std::size_t>(height_);
     for (std::size_t i = 0; i < count; ++i) {

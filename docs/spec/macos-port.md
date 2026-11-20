@@ -48,7 +48,7 @@ Build a modernized Geiss visualizer for Apple Silicon Macs. Preserve the recogni
 - Detection is bass-focused. Two one-pole low-pass stages at 150 Hz run across each block, and the bass level is the RMS of its newest 1/30 s. Intentional difference: the original measured the composite volume.
 - The detector ports the original's beat logic (`main.cpp`: beat mode, the beat-mode brightness, and `bBigBeat`). A smoothed bass level feeds a history of 120 samples written at a fixed 30 per second of elapsed time, so frame rate and overlapping blocks do not change it.
 - Beat mode turns on when that history is evenly bumpy, using the original's strength measure and its 109/71 hysteresis. A quiet history (smoothed bass below 0.01 RMS) is never in beat mode. A steady tone, hi-hats alone, or a sustained bass note stay out of beat mode.
-- In beat mode, the waveform brightness scales from 0 at the average bass to full at half a standard deviation above it, so the line flashes on hits and goes dark between them. The X-Y oscilloscope keeps its steady brightness, as in the original.
+- In beat mode, the waveform brightness scales from 0 at the average bass to full at half a standard deviation above it, so the line flashes on hits and goes dark between them. A hit draws at the top of the palette, which is white-hot, so it stands out from the glowing trails. The X-Y oscilloscope keeps its steady brightness, as in the original.
 - When the 20-second timer is due in beat mode, the new look waits for a big beat: the smoothed bass over the loudest of the previous 4/3 s, against a threshold that starts at 1.10. Intentional difference: the threshold relaxes by 0.2 over a 5-second wait instead of the original's 18 seconds, and the look changes when the wait ends. A steady beat therefore lands the change on a hit after about 1.3 s, and a louder hit lands it at once.
 - Lock still holds the look. Next still switches at once. Pause freezes the timer and the wait.
 - The horizontal slide shift on beats waits. There is no beat control.
@@ -59,7 +59,7 @@ Build a modernized Geiss visualizer for Apple Silicon Macs. Preserve the recogni
 - Preserve the existing visualization algorithms and their visual intent in portable C++ where practical.
 - In the first version, Metal uploads the RGBA8 buffer and scales it. A GPU warp can be considered later if CPU cost calls for it.
 - Each tick warps the previous index buffer through the current map, darkens it, draws the waveform, and then expands the palette to RGBA8.
-- The prototype palette is one 256-color hue cycle. Its phase turns with time. Audio-linked palettes wait. That difference is noted beside the ported code.
+- The prototype palette is one 256-color hue cycle. Its phase turns with time. The top 15% of indices blends from the hue toward white, eased in, so a freshly drawn full-brightness line glows white and fades back into the hue within about 0.7 s at the original decay rate. Audio-linked palettes wait. That difference is noted beside the ported code.
 - Presentation follows the display. Simulation time is elapsed seconds. A large gap after sleep or wake is capped so the picture does not jump.
 - Simulation resolution is independent of the display. The longest side is capped at 960, and the aspect ratio follows the window.
 
@@ -168,7 +168,7 @@ The Windows project has a substantial set of rendering behaviors and options. So
 - Automatic variation: visuals evolve on their own. Pause freezes the picture. Lock holds the current map, waveform, and palette while audio motion continues. Next visual advances the look.
 - Initial controls: sensitivity, pause, lock, and next visual.
 - Pixels: portable C++ simulates 8-bit palette indices, then expands them to RGBA8. Metal uploads and scales that buffer.
-- Current picture: map modes 17 (horizontal tunnel), 19 (vortex), 24 (fast swirl), and 25 (smooth 1/r zoom), with waveforms 1 (one line), 2 (two lines), and 6 (X-Y oscilloscope). The window opens on mode 25 and waveform 1. Next and the 20-second timer pick a different pair. Mode 24 is not paired with waveform 6. Lock holds that pair and the palette. Pause freezes the picture. One hue-cycle palette. Each frame feeds back through the same warp. No new controls. Beats brighten the waveform and land look changes, from a bass-focused detector. The horizontal slide shift waits. Layered effects, chunked map generation, a GPU warp, and the screen saver host wait.
+- Current picture: map modes 17 (horizontal tunnel), 19 (vortex), 24 (fast swirl), and 25 (smooth 1/r zoom), with waveforms 1 (one line), 2 (two lines), and 6 (X-Y oscilloscope). The window opens on mode 25 and waveform 1. Next and the 20-second timer pick a different pair. Mode 24 is not paired with waveform 6. Lock holds that pair and the palette. Pause freezes the picture. One hue-cycle palette with a white-hot top. Each frame feeds back through the same warp. No new controls. Beats brighten the waveform and land look changes, from a bass-focused detector. The horizontal slide shift waits. Layered effects, chunked map generation, a GPU warp, and the screen saver host wait.
 - Launch: the visualizer opens immediately. Denied or failed capture keeps calm motion and shows an overlay that opens System Settings.
 
 ### Choices considered

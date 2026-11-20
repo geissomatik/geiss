@@ -390,6 +390,36 @@ void testWaveBrightnessFollowsVolume() {
     check(colorSum(silentEngine.tick(1.0 / 30.0, silent)) == 0, "no volume draws no line");
 }
 
+// The whitest pixel: the largest smallest channel. 255 is pure white, 0 is a full hue or black.
+int whitestPixel(const geiss::FrameView& frame) {
+    int whitest = 0;
+    const std::size_t pixels = static_cast<std::size_t>(frame.width) * static_cast<std::size_t>(frame.height);
+    for (std::size_t i = 0; i < pixels; ++i) {
+        const int smallest = std::min({frame.rgba[i * 4], frame.rgba[i * 4 + 1], frame.rgba[i * 4 + 2]});
+        whitest = std::max(whitest, smallest);
+    }
+    return whitest;
+}
+
+void testWhiteHotPaletteTop() {
+    geiss::AudioFrame full = beatFrame(false, 1.f, 0.f);
+    geiss::Engine fullEngine(1);
+    fullEngine.resize(32, 24);
+    check(whitestPixel(fullEngine.tick(1.0 / 30.0, full)) > 245, "a full-brightness line is drawn white-hot");
+
+    geiss::AudioFrame dimmer = beatFrame(false, 1.f, 0.f);
+    dimmer.volume = 30.f;
+    dimmer.averageVolume = 30.f;
+    geiss::Engine dimmerEngine(1);
+    dimmerEngine.resize(32, 24);
+    check(whitestPixel(dimmerEngine.tick(1.0 / 30.0, dimmer)) == 0, "below the top of the palette a line keeps its full hue");
+
+    geiss::AudioFrame half = beatFrame(true, 0.5f, 0.f);
+    geiss::Engine halfEngine(1);
+    halfEngine.resize(32, 24);
+    check(whitestPixel(halfEngine.tick(1.0 / 30.0, half)) == 0, "a beat-mode line between hits is not white");
+}
+
 void testLookWaitsForBigBeat() {
     geiss::Engine plain(1);
     plain.resize(16, 12);
@@ -431,6 +461,7 @@ int main() {  // NOLINT(bugprone-exception-escape): a test may abort on a failed
     testLookWaitsForBigBeat();
     testVolumeScale();
     testWaveBrightnessFollowsVolume();
+    testWhiteHotPaletteTop();
     if (failures != 0) {
         std::cerr << failures << " failed\n";
         return EXIT_FAILURE;
