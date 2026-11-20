@@ -45,6 +45,24 @@ constexpr double kReferenceFps = 30.0;
 constexpr double kMaxDt = 0.1;
 constexpr double kMapInterval = 20.0;
 constexpr float kHuePeriod = 24.f;
+// When a look is due during beat mode, it waits for a big beat, as the finished map did in
+// the original. The threshold starts at 1.10 and relaxes by 0.2.
+// Intentional difference: the original relaxed over its 550-frame (about 18 s) switch
+// period. Here it relaxes over the 5 s wait, and the look changes when the wait ends.
+// A steady beat peaks near 1.05, so it lands the change on a hit after about 1.3 s,
+// and a louder hit lands it at once.
+constexpr float kBigBeatThreshold = 1.10f;
+constexpr float kBigBeatRelax = 0.2f;
+constexpr double kMaxBeatWait = 5.0;
+constexpr double kBigBeatRelaxSeconds = kMaxBeatWait;
+
+bool lookMayChange(double overdue, const AudioFrame& audio) {
+    if (!audio.beatMode || overdue >= kMaxBeatWait) {
+        return true;
+    }
+    const auto threshold = kBigBeatThreshold - kBigBeatRelax * static_cast<float>(overdue / kBigBeatRelaxSeconds);
+    return audio.bigBeatRatio > threshold;
+}
 
 // xorshift32 so the engine does not depend on a global rand().
 std::uint32_t nextRandom(std::uint32_t& state) {
@@ -120,6 +138,15 @@ void hsv(float hue, float value, std::uint8_t& r, std::uint8_t& g, std::uint8_t&
     b = static_cast<std::uint8_t>(std::clamp(bf * value, 0.f, 1.f) * 255.f + 0.5f);
 }
 
+// The top `kWhiteHotSpan` of the palette blends from the hue toward white, eased in.
+// At the original decay rate (about 0.992 per 1/30 s), a trail fades out of it in about 0.7 s.
+constexpr float kWhiteHotSpan = 0.15f;
+
+float whiteHot(float value) {
+    const float t = std::clamp((value - (1.f - kWhiteHotSpan)) / kWhiteHotSpan, 0.f, 1.f);
+    return t * t * (3.f - 2.f * t);
+}
+
 // A -1...1 sample covers about 35% of the height. The original scaled 16-bit capture
 // by volscale. That constant waits until real tap levels are known.
 constexpr float kWaveFraction = 0.35f;
@@ -137,6 +164,16 @@ float columnSample(const std::vector<float>& samples, int x, int width) {
     }
     const std::size_t index = static_cast<std::size_t>(clamped) * (samples.size() - 1) / static_cast<std::size_t>(width - 1);
     return samples[index];
+}
+
+// RenderWave's plugin brightness: base = current_vol*4 + avg_vol*0.4 - 10, clamped to
+// 0...155. The original then tinted that RGB base up to about 255; here 0...155 maps
+// onto the palette's 0...255 index range, so normal listening levels draw at full brightness.
+constexpr float kBaseCeiling = 155.f;
+
+float waveBrightness(float volume, float averageVolume) {
+    const float base = std::clamp(volume * 4.f + averageVolume * 0.4f - 10.f, 0.f, kBaseCeiling);
+    return base * 255.f / kBaseCeiling;
 }
 
 void plot(std::uint8_t* indices, int width, int height, int x, int y, int bright) {
@@ -215,7 +252,13 @@ void drawWaveform(std::uint8_t* indices, int width, int height, const AudioFrame
     if (indices == nullptr || audio.silent || audio.samples.empty() || width < 2 || height < 2) {
         return;
     }
-    const int bright = std::clamp(static_cast<int>(40.f + audio.level * 400.f), 40, 255);
+    // Beat-mode brightness follows each hit and goes dark between them. As in the
+    // original, the X-Y oscilloscope keeps its steady brightness.
+    const float beatScale = audio.beatMode && waveform != 6 ? std::clamp(audio.beatBrightness, 0.f, 1.f) : 1.f;
+    const int bright = static_cast<int>(waveBrightness(audio.volume, audio.averageVolume) * beatScale);
+    if (bright < 1) {
+        return;
+    }
     if (waveform == 2) {
         drawTwoLines(indices, width, height, audio, bright, centerYNorm);
     } else if (waveform == 6) {
@@ -306,7 +349,15 @@ void Engine::expandPalette(const std::uint8_t* indices) {
         const float value = static_cast<float>(i) / 255.f;
         // One hue cycle. Low indices stay dark so the warp fades toward black.
         // Intentional difference: this is not the original palette generator.
-        hsv(phase_ + 0.08f * value, value, palette[i * 3], palette[i * 3 + 1], palette[i * 3 + 2]);
+        std::uint8_t* color = &palette[i * 3];
+        hsv(phase_ + 0.08f * value, value, color[0], color[1], color[2]);
+        // The top of the palette turns white-hot, so a freshly drawn full-brightness line,
+        // such as a beat hit, stands out from the decaying trails around it.
+        const float white = whiteHot(value);
+        for (std::size_t channel = 0; channel < 3; ++channel) {
+            const float hue = static_cast<float>(color[channel]);
+            color[channel] = static_cast<std::uint8_t>(hue + (255.f * value - hue) * white + 0.5f);
+        }
     }
     const std::size_t count = static_cast<std::size_t>(width_) * static_cast<std::size_t>(height_);
     for (std::size_t i = 0; i < count; ++i) {
@@ -340,7 +391,7 @@ FrameView Engine::tick(double dt, const AudioFrame& audio) {
         phase_ += static_cast<float>(dt) / kHuePeriod;
         phase_ -= std::floor(phase_);
         mapElapsed_ += dt;
-        if (mapElapsed_ >= kMapInterval) {
+        if (mapElapsed_ >= kMapInterval && lookMayChange(mapElapsed_ - kMapInterval, audio)) {
             pickLook();
             mapElapsed_ = 0;
             rebuildMap();

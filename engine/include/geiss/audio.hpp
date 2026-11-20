@@ -34,6 +34,8 @@
 
 #pragma once
 
+#include "geiss/beat.hpp"
+
 #include <vector>
 
 namespace geiss {
@@ -57,11 +59,20 @@ struct AudioFrame {
     std::vector<float> right;
     float level = 0;
     float peak = 0;
-    bool beat = false;
+    // The original's volume scale (16-bit peak-to-peak / 256, so 0...256): peak-to-peak
+    // of the mono samples over the newest 1/30 s, after gain. `averageVolume` smooths it
+    // like avg_vol (0.85 per frame at 30 fps). RenderWave's brightness uses both.
+    float volume = 0;
+    float averageVolume = 0;
     bool silent = false;
+    // Bass level and the beat state derived from it. See BeatDetector.
+    float bass = 0;
+    bool beatMode = false;
+    float beatBrightness = 1;
+    float bigBeatRatio = 0;
 };
 
-// Turns PCM into an AudioFrame. The beat flag stays false until a later port.
+// Turns PCM into an AudioFrame, including the beat state from BeatDetector.
 // Follows the level-trigger idea in GetWaveData with a simpler rising-edge rotate.
 // The same rotation is applied to the mono, left, and right columns.
 // The silence hold counts the time between blocks, from `PcmBlock::time`, so overlapping
@@ -72,6 +83,8 @@ public:
     AudioFrame analyze(const PcmBlock& block, int columns, float gain);
 
 private:
+    BeatDetector beat_;
+    float averageVolume_ = 0;
     double silenceHeld_ = 0;
     double lastTime_ = 0;
     bool hasLastTime_ = false;
