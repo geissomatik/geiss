@@ -1,3 +1,4 @@
 .DS_Store
 engine/build/
 DerivedData/
+.claude/settings.local.json
