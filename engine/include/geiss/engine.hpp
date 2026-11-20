@@ -45,6 +45,9 @@ namespace geiss {
 constexpr int kFirstWaveform = 1;
 constexpr int kLastWaveform = 6;
 
+// A short name for the waveform, from the spec's list, or "?" for an unknown number.
+const char* waveformName(int waveform);
+
 // One map mode and one waveform.
 struct Look {
     int mode = 25;

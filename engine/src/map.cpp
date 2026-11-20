@@ -35,6 +35,7 @@
 #include "geiss/map.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 
@@ -307,6 +308,20 @@ float normalTurn(Random& random) {
 }
 
 }  // namespace
+
+const char* mapName(int mode) {
+    static constexpr std::array<const char*, kLastMapMode> kNames = {
+        "Constant zoom", "Outward zoom", "Terra-landing", "Sphere", "Super-perspective",
+        "Vortex field", "Fuzzy", "Ripples", "Flower petals", "Scroll",
+        "Two rotations", "Sideways splitter", "Black hole", "Split world", "Radial petals",
+        "Crystal ball", "Horizontal tunnel", "Vertical tunnel", "Vortex", "Terra",
+        "Diced cubes", "Phonic rings", "Fast rings", "Fast swirl", "Smooth zoom",
+    };
+    if (mode < kFirstMapMode || mode > kLastMapMode) {
+        return "?";
+    }
+    return kNames.at(static_cast<std::size_t>(mode - kFirstMapMode));
+}
 
 MapParameters randomMapParameters(int mode, int width, int height, Random& random) {
     MapParameters map;

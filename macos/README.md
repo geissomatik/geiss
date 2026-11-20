@@ -31,6 +31,8 @@ The window opens at 1280×720 and asks to record system audio. The picture start
 
 The bar reads LIVE while the tap is running, WAIT while it is starting or blocked, TONE for the generated note, and QUIET for silence. Sensitivity is remembered. Pause and lock are not.
 
+Press I (or Visual > Show Info) for a debug readout in the top-left corner: frames per second, the map number and name, the waveform, and the look's effects, marked "resting" while the Mac is quiet. The names are the ones in [the glossary](../docs/glossary.md). Press I again to hide it.
+
 ## Linting
 
 A pre-commit hook lints the files you commit. clang-tidy checks the C++ in `engine/` and the Objective-C++ bridge, using [`.clang-tidy`](../.clang-tidy). Any finding blocks the commit. SwiftLint checks the Swift in `macos/`, using [`.swiftlint.yml`](../.swiftlint.yml). Only errors block the commit, and warnings are shown. The Windows sources in the repository root are not linted.

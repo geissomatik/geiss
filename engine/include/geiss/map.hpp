@@ -101,6 +101,9 @@ struct SourcePoint {
 constexpr int kFirstMapMode = 1;
 constexpr int kLastMapMode = 25;
 
+// The map's name from docs/glossary.md, or "?" for an unknown number.
+const char* mapName(int mode);
+
 // The per-map random setup in GenerateChunkOfNewMap for `mode`: center, turn, scale,
 // f1...f3, and the mode's own extras. `width` and `height` place the center.
 MapParameters randomMapParameters(int mode, int width, int height, Random& random);

@@ -46,6 +46,9 @@ namespace geiss {
 enum class Effect : std::uint8_t { Chasers, Bar, Dots, Solar, Grid, Nuclide, Shade };
 constexpr int kEffectCount = 7;
 
+// The effect's name from docs/glossary.md.
+const char* effectName(Effect effect);
+
 // One map mode's effect setup, from CModeInfo. Weights are out of 1000.
 struct ModeEffects {
     std::array<int, kEffectCount> weights{};

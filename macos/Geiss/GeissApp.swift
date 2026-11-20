@@ -64,6 +64,10 @@ struct GeissApp: App {
                     model.nextVisual()
                 }
                 .keyboardShortcut("n", modifiers: [])
+                Button(model.showInfo ? "Hide Info" : "Show Info") {
+                    model.toggleInfo()
+                }
+                .keyboardShortcut("i", modifiers: [])
                 Divider()
                 Button("System Audio") {
                     model.preview = .system

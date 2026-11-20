@@ -72,6 +72,7 @@ Build a modernized Geiss visualizer for Apple Silicon Macs. Preserve the recogni
   - **Pause.** Freezes the picture. This state does not persist.
   - **Lock.** Keeps audio motion and holds the current map, waveform, and palette. This state does not persist.
   - **Next visual.**
+- **Info readout (debug aid, user decision).** I, or Visual > Show Info, toggles a small readout in the top-left corner: frames per second (counted from real ticks, refreshed twice a second), the map number and name, the waveform number and name, and the look's effects, marked as resting in silence. Names follow [the glossary](../glossary.md). It starts hidden, is not persisted, and is not a visualizer control.
 - The picture is full-bleed. Vertical size, letterboxing, beat response, palette controls, variation pace, and horizontal shift stay internal until a later version asks for them.
 
 ## When audio permission is missing

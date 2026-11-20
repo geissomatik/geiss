@@ -46,6 +46,13 @@ struct VisualizerView: View {
             ZStack(alignment: .bottom) {
                 MetalScreen(presenter: model.presenter)
                     .ignoresSafeArea()
+                if let info = model.info {
+                    infoOverlay(info)
+                        .padding(.top, 16)
+                        .padding(.leading, 16)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .allowsHitTesting(false)
+                }
                 if case .failed(let status) = model.capture, model.preview == .system {
                     captureOverlay(status: status)
                         .padding(.top, 28)
@@ -84,7 +91,7 @@ struct VisualizerView: View {
             }
         }
         .focusable()
-        // Space, L, and N are menu shortcuts in the Visual menu. The right arrow is extra.
+        // Space, L, N, and I are menu shortcuts in the Visual menu. The right arrow is extra.
         .onKeyPress(.rightArrow) {
             model.nextVisual()
             return .handled
@@ -114,6 +121,30 @@ struct VisualizerView: View {
         .background(Color.black.opacity(0.62))
         .overlay(alignment: .top) {
             Rectangle().fill(amber.opacity(0.9)).frame(height: 1)
+        }
+    }
+
+    private func infoOverlay(_ info: InfoSnapshot) -> some View {
+        Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 3) {
+            infoRow("FPS", "\(info.fps)")
+            infoRow("MAP", info.map)
+            infoRow("WAVE", info.wave)
+            infoRow("FX", info.effects)
+        }
+        .font(.system(size: 12, weight: .medium, design: .monospaced))
+        .foregroundStyle(.white.opacity(0.88))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color.black.opacity(0.62))
+        .overlay(alignment: .leading) {
+            Rectangle().fill(amber.opacity(0.9)).frame(width: 1)
+        }
+    }
+
+    private func infoRow(_ label: String, _ value: String) -> some View {
+        GridRow {
+            Text(label).foregroundStyle(amber)
+            Text(value)
         }
     }
 

@@ -35,6 +35,7 @@
 #include "geiss/engine.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 
@@ -299,6 +300,16 @@ void drawWaveform(std::uint8_t* indices, int width, int height, const AudioFrame
 }
 
 }  // namespace
+
+const char* waveformName(int waveform) {
+    static constexpr std::array<const char*, kLastWaveform> kNames = {
+        "Line", "Two lines", "Vertical line", "Diagonals", "Circle", "Oscilloscope",
+    };
+    if (waveform < kFirstWaveform || waveform > kLastWaveform) {
+        return "?";
+    }
+    return kNames.at(static_cast<std::size_t>(waveform - kFirstWaveform));
+}
 
 bool lookAllowed(int mode, int waveform) {
     if (mode < kFirstMapMode || mode > kLastMapMode || waveform < kFirstWaveform || waveform > kLastWaveform) {

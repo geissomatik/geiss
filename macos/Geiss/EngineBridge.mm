@@ -39,6 +39,45 @@
 
 #include <memory>
 
+@interface GeissLookInfo ()
+
+- (instancetype)initWithEngine:(const geiss::Engine &)engine
+                         audio:(const geiss::AudioFrame &)audio NS_DESIGNATED_INITIALIZER;
+
+@end
+
+@implementation GeissLookInfo
+
+- (instancetype)initWithEngine:(const geiss::Engine &)engine
+                         audio:(const geiss::AudioFrame &)audio {
+    self = [super init];
+    if (self != nil) {
+        const geiss::EffectSet &set = engine.effects();
+        _mapMode = engine.mapMode();
+        _mapName = @(geiss::mapName(engine.mapMode()));
+        _waveform = engine.waveform();
+        _waveformName = @(geiss::waveformName(engine.waveform()));
+        _waveformHidden = set.hideWaveform;
+        NSMutableArray<NSString *> *names = [NSMutableArray array];
+        for (int index = 0; index < geiss::kEffectCount; ++index) {
+            const auto effect = static_cast<geiss::Effect>(index);
+            if (!set.has(effect)) {
+                continue;
+            }
+            NSString *name = @(geiss::effectName(effect));
+            if (effect == geiss::Effect::Chasers && set.chasers > 1) {
+                name = [name stringByAppendingFormat:@" x%d", set.chasers];
+            }
+            [names addObject:name];
+        }
+        _effects = [names copy];
+        _resting = audio.silent || audio.samples.empty();
+    }
+    return self;
+}
+
+@end
+
 @implementation GeissBridge {
     std::unique_ptr<geiss::Engine> engine_;
     geiss::Analyzer analyzer_;
@@ -87,6 +126,10 @@
     block.sampleRate = sampleRate;
     block.time = time;
     frame_ = analyzer_.analyze(block, engine_->width(), gain_);
+}
+
+- (GeissLookInfo *)lookInfo {
+    return [[GeissLookInfo alloc] initWithEngine:*engine_ audio:frame_];
 }
 
 - (const uint8_t *)tick:(double)dt width:(int *)width height:(int *)height {

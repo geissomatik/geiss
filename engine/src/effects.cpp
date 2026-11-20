@@ -107,6 +107,13 @@ bool hasSound(const AudioFrame& audio) { return !audio.silent && !audio.samples.
 
 }  // namespace
 
+const char* effectName(Effect effect) {
+    static constexpr std::array<const char*, kEffectCount> kNames = {
+        "Chasers", "Bar", "Dots", "Solar", "Grid", "Nuclide", "Shade bobs",
+    };
+    return kNames.at(static_cast<std::size_t>(effect));
+}
+
 int EffectSet::count() const {
     return static_cast<int>(std::count(on.begin(), on.end(), true));
 }

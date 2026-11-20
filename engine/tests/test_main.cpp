@@ -42,6 +42,8 @@
 #include <numbers>
 #include <cstdlib>
 #include <iostream>
+#include <set>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -1094,6 +1096,39 @@ void testMode5FollowsNuclide() {
     checkNear(without, map.f2 - map.f1 * std::sqrt(28.f * 10.f / 200.f), 0.01f, "mode 5 without it falls off with sqrt(r)");
 }
 
+void testNames() {
+    std::set<std::string> maps;
+    for (int mode = geiss::kFirstMapMode; mode <= geiss::kLastMapMode; ++mode) {
+        const std::string name = geiss::mapName(mode);
+        check(!name.empty() && name != "?", "every map mode has a name");
+        maps.insert(name);
+    }
+    check(maps.size() == static_cast<std::size_t>(geiss::kLastMapMode), "map names are unique");
+    check(std::string(geiss::mapName(25)) == "Smooth zoom", "mode 25 is the smooth zoom");
+    check(std::string(geiss::mapName(1)) == "Constant zoom", "mode 1 is the constant zoom");
+    check(std::string(geiss::mapName(0)) == "?", "mode 0 has no name");
+    check(std::string(geiss::mapName(26)) == "?", "mode 26 has no name");
+
+    std::set<std::string> effects;
+    for (int index = 0; index < geiss::kEffectCount; ++index) {
+        const std::string name = geiss::effectName(static_cast<geiss::Effect>(index));
+        check(!name.empty(), "every effect has a name");
+        effects.insert(name);
+    }
+    check(effects.size() == static_cast<std::size_t>(geiss::kEffectCount), "effect names are unique");
+    check(std::string(geiss::effectName(geiss::Effect::Shade)) == "Shade bobs", "Shade is shade bobs");
+
+    std::set<std::string> waves;
+    for (int waveform = geiss::kFirstWaveform; waveform <= geiss::kLastWaveform; ++waveform) {
+        const std::string name = geiss::waveformName(waveform);
+        check(!name.empty() && name != "?", "every waveform has a name");
+        waves.insert(name);
+    }
+    check(waves.size() == static_cast<std::size_t>(geiss::kLastWaveform), "waveform names are unique");
+    check(std::string(geiss::waveformName(6)) == "Oscilloscope", "waveform 6 is the oscilloscope");
+    check(std::string(geiss::waveformName(7)) == "?", "waveform 7 has no name");
+}
+
 void testEngineEffects() {
     geiss::Engine engine(9);
     engine.resize(64, 48);
@@ -1161,6 +1196,7 @@ int main() {  // NOLINT(bugprone-exception-escape): a test may abort on a failed
     testCenterDwindle();
     testMode5FollowsNuclide();
     testEngineEffects();
+    testNames();
     if (failures != 0) {
         std::cerr << failures << " failed\n";
         return EXIT_FAILURE;

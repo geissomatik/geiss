@@ -36,7 +36,26 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-// The only Objective-C type the SwiftUI shell sees. The pointer from tick is
+// What the current look is made of, for the debug info readout.
+@interface GeissLookInfo : NSObject
+
+- (instancetype)init NS_UNAVAILABLE;
++ (instancetype)new NS_UNAVAILABLE;
+
+@property (nonatomic, readonly) int mapMode;
+@property (nonatomic, readonly, copy) NSString *mapName;
+@property (nonatomic, readonly) int waveform;
+@property (nonatomic, readonly, copy) NSString *waveformName;
+// True when the nuclide replaces the waveform in this look.
+@property (nonatomic, readonly) BOOL waveformHidden;
+// The look's effects in the original's order. Chasers reads "Chasers x2" for two.
+@property (nonatomic, readonly, copy) NSArray<NSString *> *effects;
+// True while the latest audio is silent, so the effects rest.
+@property (nonatomic, readonly) BOOL resting;
+
+@end
+
+// The SwiftUI shell sees only these Objective-C types. The pointer from tick is
 // valid until the next tick or resize.
 @interface GeissBridge : NSObject
 
@@ -53,6 +72,7 @@ NS_ASSUME_NONNULL_BEGIN
                   channels:(int)channels
                 sampleRate:(double)sampleRate
                       time:(double)time;
+- (GeissLookInfo *)lookInfo;
 - (const uint8_t *)tick:(double)dt width:(int *)width height:(int *)height;
 
 @end

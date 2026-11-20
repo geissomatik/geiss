@@ -35,6 +35,14 @@
 import AppKit
 import SwiftUI
 
+// What the debug info readout shows. Refreshed twice a second while it is visible.
+struct InfoSnapshot: Equatable {
+    var fps: Int
+    var map: String
+    var wave: String
+    var effects: String
+}
+
 enum PreviewSource: String {
     case system
     case tone
@@ -62,6 +70,9 @@ final class VisualizerModel: ObservableObject {
     }
     @Published var preview: PreviewSource = .system
     @Published var capture: CaptureStatus = .starting
+    // The debug readout of FPS, map, waveform, and effects. Not persisted.
+    @Published private(set) var showInfo = false
+    @Published private(set) var info: InfoSnapshot?
 
     private let bridge = GeissBridge(seed: 1)
     private let tap = SystemAudioTap()
@@ -72,6 +83,11 @@ final class VisualizerModel: ObservableObject {
     private var simHeight = 0
     private var silenceBuffer: [Float] = []
     private var captureBuffer: [Float] = []
+    private var fpsWindowStart: Date?
+    private var fpsWindowFrames = 0
+    private var fps = 0
+
+    private static let infoInterval = 0.5
 
     private static let sensitivityKey = "sensitivity"
 
@@ -127,6 +143,12 @@ final class VisualizerModel: ObservableObject {
 
     func nextVisual() {
         bridge.nextVisual()
+        refreshInfo()
+    }
+
+    func toggleInfo() {
+        showInfo.toggle()
+        refreshInfo()
     }
 
     func tick(to date: Date, viewSize: CGSize) {
@@ -161,6 +183,49 @@ final class VisualizerModel: ObservableObject {
         var height: Int32 = 0
         let pixels = bridge.tick(dt, width: &width, height: &height)
         presenter.upload(pixels: pixels, width: Int(width), height: Int(height))
+        countFrame(at: date)
+    }
+
+    // Counts real ticks rather than summing dt, which is capped.
+    private func countFrame(at date: Date) {
+        fpsWindowFrames += 1
+        guard let start = fpsWindowStart else {
+            fpsWindowStart = date
+            fpsWindowFrames = 0
+            return
+        }
+        let elapsed = date.timeIntervalSince(start)
+        guard elapsed >= Self.infoInterval else { return }
+        fps = Int((Double(fpsWindowFrames) / elapsed).rounded())
+        fpsWindowStart = date
+        fpsWindowFrames = 0
+        refreshInfo()
+    }
+
+    private func refreshInfo() {
+        guard showInfo else {
+            info = nil
+            return
+        }
+        let look = bridge.lookInfo()
+        var wave = "\(look.waveform) \(look.waveformName)"
+        if look.waveformHidden {
+            wave += " (hidden by Nuclide)"
+        }
+        let snapshot = InfoSnapshot(
+            fps: fps,
+            map: "\(look.mapMode) \(look.mapName)",
+            wave: wave,
+            effects: Self.effectsLine(look)
+        )
+        if snapshot != info {
+            info = snapshot
+        }
+    }
+
+    private static func effectsLine(_ look: GeissLookInfo) -> String {
+        let names = look.effects.isEmpty ? "none" : look.effects.joined(separator: ", ")
+        return look.resting ? "\(names) (resting)" : names
     }
 
     static func simulationSize(for viewSize: CGSize) -> (width: Int, height: Int) {
