@@ -125,7 +125,7 @@ void testAnalysis() {
     checkNear(gained.level, 1.f, 0.0001f, "gain scales the RMS");
     checkNear(gained.peak, 1.f, 0.0001f, "gain scales the peak");
     check(!gained.silent, "a loud block is not silence");
-    check(!gained.beat, "the beat flag waits");
+    check(!gained.beatMode, "one block is not a beat");
 
     const float wave[] = {-0.5f, -0.2f, 0.1f, 0.4f};
     block.samples = wave;

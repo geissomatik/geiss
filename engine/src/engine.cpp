@@ -45,6 +45,24 @@ constexpr double kReferenceFps = 30.0;
 constexpr double kMaxDt = 0.1;
 constexpr double kMapInterval = 20.0;
 constexpr float kHuePeriod = 24.f;
+// When a look is due during beat mode, it waits for a big beat, as the finished map did in
+// the original. The threshold starts at 1.10 and relaxes by 0.2.
+// Intentional difference: the original relaxed over its 550-frame (about 18 s) switch
+// period. Here it relaxes over the 5 s wait, and the look changes when the wait ends.
+// A steady beat peaks near 1.05, so it lands the change on a hit after about 1.3 s,
+// and a louder hit lands it at once.
+constexpr float kBigBeatThreshold = 1.10f;
+constexpr float kBigBeatRelax = 0.2f;
+constexpr double kMaxBeatWait = 5.0;
+constexpr double kBigBeatRelaxSeconds = kMaxBeatWait;
+
+bool lookMayChange(double overdue, const AudioFrame& audio) {
+    if (!audio.beatMode || overdue >= kMaxBeatWait) {
+        return true;
+    }
+    const auto threshold = kBigBeatThreshold - kBigBeatRelax * static_cast<float>(overdue / kBigBeatRelaxSeconds);
+    return audio.bigBeatRatio > threshold;
+}
 
 // xorshift32 so the engine does not depend on a global rand().
 std::uint32_t nextRandom(std::uint32_t& state) {
@@ -215,7 +233,14 @@ void drawWaveform(std::uint8_t* indices, int width, int height, const AudioFrame
     if (indices == nullptr || audio.silent || audio.samples.empty() || width < 2 || height < 2) {
         return;
     }
-    const int bright = std::clamp(static_cast<int>(40.f + audio.level * 400.f), 40, 255);
+    // Beat-mode brightness follows each hit and goes dark between them. As in the
+    // original, the X-Y oscilloscope keeps its steady brightness.
+    const float beatScale = audio.beatMode && waveform != 6 ? std::clamp(audio.beatBrightness, 0.f, 1.f) : 1.f;
+    const float steady = std::clamp(40.f + audio.level * 400.f, 40.f, 255.f);
+    const int bright = static_cast<int>(steady * beatScale);
+    if (bright < 1) {
+        return;
+    }
     if (waveform == 2) {
         drawTwoLines(indices, width, height, audio, bright, centerYNorm);
     } else if (waveform == 6) {
@@ -340,7 +365,7 @@ FrameView Engine::tick(double dt, const AudioFrame& audio) {
         phase_ += static_cast<float>(dt) / kHuePeriod;
         phase_ -= std::floor(phase_);
         mapElapsed_ += dt;
-        if (mapElapsed_ >= kMapInterval) {
+        if (mapElapsed_ >= kMapInterval && lookMayChange(mapElapsed_ - kMapInterval, audio)) {
             pickLook();
             mapElapsed_ = 0;
             rebuildMap();

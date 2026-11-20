@@ -27,7 +27,7 @@ open /tmp/geiss-dd/Build/Products/Debug/Geiss.app
 
 ## What you see
 
-The window opens at 1280×720 and asks to record system audio. The picture starts as a smooth zoom with one line across the middle. About every 20 seconds, and whenever you press Next, it picks another look: a horizontal tunnel, a vortex, a fast swirl, or the zoom, with one line, two lines, or an X-Y oscilloscope. The fast swirl is drawn with one line or two. The waveform follows the Mac's output. Quiet output leaves the picture calm. Visual > Tone plays a steady note. Visual > Silence fades the waveform. Pause freezes the picture. Lock holds the current look and the color. The controls hide after a few seconds and return when the pointer moves.
+The window opens at 1280×720 and asks to record system audio. The picture starts as a smooth zoom with one line across the middle. About every 20 seconds, and whenever you press Next, it picks another look: a horizontal tunnel, a vortex, a fast swirl, or the zoom, with one line, two lines, or an X-Y oscilloscope. The fast swirl is drawn with one line or two. The waveform follows the Mac's output. When music has a steady bass beat, the line flashes on each hit and goes dark between them (the oscilloscope stays steady), and the next look waits a moment to land on a beat. Quiet output leaves the picture calm. Visual > Tone plays a steady note. Visual > Silence fades the waveform. Pause freezes the picture. Lock holds the current look and the color. The controls hide after a few seconds and return when the pointer moves.
 
 The bar reads LIVE while the tap is running, WAIT while it is starting or blocked, TONE for the generated note, and QUIET for silence. Sensitivity is remembered. Pause and lock are not.
 
@@ -51,6 +51,7 @@ Copyright (c) 1998-2022 Ryan Geiss. The picture engine and this app are licensed
 |---|---|
 | The window stays black | Wait a moment, or press Resume if the picture is paused. |
 | The waveform does not move | The Mac is quiet, or Visual > Silence is selected. Play some sound, or choose Visual > Tone. |
+| The line vanishes between beats | That is beat mode with a steady bass beat. It returns on each hit and stays steady in quieter or beatless music. |
 | Geiss cannot hear this Mac | Choose Open System Settings and allow Geiss under System Audio Recording. Return to the window. A local rebuild can ask again. |
 | Playback stops while Geiss is open | Quit Geiss. The tap is meant to leave playback running. |
 | `xcodebuild` cannot find Metal | Build on an Apple Silicon Mac with Xcode, for the `arm64` destination above. |

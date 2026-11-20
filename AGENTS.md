@@ -30,7 +30,9 @@ The app taps the default output mix. Playback continues. The audio callback only
 
 The window controls are sensitivity (persisted, default 1.0), pause, lock, and next visual. The bar hides after a few seconds. Space pauses, L locks, and N or the right arrow advances the look.
 
-Still ahead: beat response is the next slice. The remaining map modes and waveforms, layered effects, chunked map generation, a GPU warp, size and quality settings, presets, multi-display, a screen saver host, sandboxing, and public distribution wait.
+Beats come from a bass-focused port of the original detector (`engine/src/beat.cpp`). In beat mode the waveform flashes on hits, except the oscilloscope, and a due look waits up to 5 seconds for a big beat. Lock and Next are unchanged. The spec's Beat response section has the details.
+
+Still ahead: the horizontal slide shift on beats, the remaining map modes and waveforms, layered effects, chunked map generation, a GPU warp, size and quality settings, presets, multi-display, a screen saver host, sandboxing, and public distribution wait.
 
 ## Porting guidance
 

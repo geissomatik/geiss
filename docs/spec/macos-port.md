@@ -36,12 +36,22 @@ Build a modernized Geiss visualizer for Apple Silicon Macs. Preserve the recogni
 - `NSAudioCaptureUsageDescription` supplies the system prompt. There is no public preflight API for this permission; the prompt appears when the tap starts.
 - Split the work into three pieces:
   - Capture, in Swift, copies PCM and returns from the audio callback. The callback converts the tap's 32-bit float stream to stereo straight into a preallocated ring. It does not allocate, wait on a lock, or log. If the reader is copying from the ring at that moment, the callback drops that block. Other tap formats are reported as a capture failure.
-  - Analysis, in portable C++, turns that PCM into one immutable frame: samples, level, peak, beat, silence, and time.
+  - Analysis, in portable C++, turns that PCM into one immutable frame: samples, level, peak, silence, time, and the beat state (bass, beat mode, beat brightness, and big-beat ratio).
   - The renderer reads only that frame.
 - A stalled consumer keeps the latest frame and drops older audio.
 - The frame carries one mono sample per simulation column, and a left and a right sample on that same grid, resampled from the tap rate into about −1…1. A one-channel block copies its sample into both sides. Level is the RMS of the mono samples. Silence means that level has stayed low for about half a second of wall time, measured between analyzed blocks rather than from their length, because successive snapshots of the ring overlap. One rising-edge alignment rotates the mono, left, and right columns together so the waveform holds in place.
 - The engine runs on the main thread. The capture callback only copies samples.
-- Waveform brightness follows level and sensitivity. The full beat detector waits. The frame may still include a beat flag for later use.
+- Waveform brightness follows level and sensitivity, and beats when a beat is on (see [Beat response](#beat-response)).
+
+### Beat response
+
+- Detection is bass-focused. Two one-pole low-pass stages at 150 Hz run across each block, and the bass level is the RMS of its newest 1/30 s. Intentional difference: the original measured the composite volume.
+- The detector ports the original's beat logic (`main.cpp`: beat mode, the beat-mode brightness, and `bBigBeat`). A smoothed bass level feeds a history of 120 samples written at a fixed 30 per second of elapsed time, so frame rate and overlapping blocks do not change it.
+- Beat mode turns on when that history is evenly bumpy, using the original's strength measure and its 109/71 hysteresis. A quiet history (smoothed bass below 0.01 RMS) is never in beat mode. A steady tone, hi-hats alone, or a sustained bass note stay out of beat mode.
+- In beat mode, the waveform brightness scales from 0 at the average bass to full at half a standard deviation above it, so the line flashes on hits and goes dark between them. The X-Y oscilloscope keeps its steady brightness, as in the original.
+- When the 20-second timer is due in beat mode, the new look waits for a big beat: the smoothed bass over the loudest of the previous 4/3 s, against a threshold that starts at 1.10. Intentional difference: the threshold relaxes by 0.2 over a 5-second wait instead of the original's 18 seconds, and the look changes when the wait ends. A steady beat therefore lands the change on a hit after about 1.3 s, and a louder hit lands it at once.
+- Lock still holds the look. Next still switches at once. Pause freezes the timer and the wait.
+- The horizontal slide shift on beats waits. There is no beat control.
 - The exact OS signal for a denied tap is confirmed during the prototype and recorded here.
 
 ## Rendering
@@ -139,7 +149,7 @@ The Windows project has a substantial set of rendering behaviors and options. So
 - **Vertical visual size / letterboxing:** percentage of display height occupied by the visual. Deferred. The first version is full-bleed.
 - **Wave scaling:** default audio waveform amplitude. This is the first-version sensitivity control.
 - **Color behavior:** palette generation, gamma, coarse and solar palette frequency, and optional sound-synchronized color. The 8-bit palette-specific controls reflect old color modes. The prototype uses one cycling palette. Palette variety and optional audio-linked color remain later work.
-- **Beat detection:** controls beat-responsive behavior. Analysis may still produce a beat flag. Beat response is the next slice, so a beat has more than one look to land on. A user-facing beat control waits.
+- **Beat detection:** controls beat-responsive behavior. Beat brightness and look changes on a big beat follow the original, from a bass-focused detector. A user-facing beat control waits.
 - **Automatic map changes:** controls how long maps are generated and shown. The first version evolves automatically. A pace setting waits, and any later control uses seconds.
 - **Automatic horizontal shifting:** percentage and frequency, plus a minimum interval between shifts. Keep this only if it remains visually valuable. Any later timing is frame-rate independent.
 - **Rendering resolution, color depth, adapter selection, frame idle delay:** Windows and DirectDraw performance controls. The first version uses the capped simulation size in [Rendering](#rendering). A quality setting waits.
@@ -158,7 +168,7 @@ The Windows project has a substantial set of rendering behaviors and options. So
 - Automatic variation: visuals evolve on their own. Pause freezes the picture. Lock holds the current map, waveform, and palette while audio motion continues. Next visual advances the look.
 - Initial controls: sensitivity, pause, lock, and next visual.
 - Pixels: portable C++ simulates 8-bit palette indices, then expands them to RGBA8. Metal uploads and scales that buffer.
-- Current picture: map modes 17 (horizontal tunnel), 19 (vortex), 24 (fast swirl), and 25 (smooth 1/r zoom), with waveforms 1 (one line), 2 (two lines), and 6 (X-Y oscilloscope). The window opens on mode 25 and waveform 1. Next and the 20-second timer pick a different pair. Mode 24 is not paired with waveform 6. Lock holds that pair and the palette. Pause freezes the picture. One hue-cycle palette. Each frame feeds back through the same warp. No new controls. Beat response is the next slice. Layered effects, chunked map generation, a GPU warp, and the screen saver host wait.
+- Current picture: map modes 17 (horizontal tunnel), 19 (vortex), 24 (fast swirl), and 25 (smooth 1/r zoom), with waveforms 1 (one line), 2 (two lines), and 6 (X-Y oscilloscope). The window opens on mode 25 and waveform 1. Next and the 20-second timer pick a different pair. Mode 24 is not paired with waveform 6. Lock holds that pair and the palette. Pause freezes the picture. One hue-cycle palette. Each frame feeds back through the same warp. No new controls. Beats brighten the waveform and land look changes, from a bass-focused detector. The horizontal slide shift waits. Layered effects, chunked map generation, a GPU warp, and the screen saver host wait.
 - Launch: the visualizer opens immediately. Denied or failed capture keeps calm motion and shows an overlay that opens System Settings.
 
 ### Choices considered

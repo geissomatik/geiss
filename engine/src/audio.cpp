@@ -116,23 +116,45 @@ void rotateFrom(std::vector<float>& samples, int rising) {
     std::rotate(samples.begin(), samples.begin() + rising, samples.end());
 }
 
+bool hasAudioBlock(const PcmBlock& block) {
+    return block.samples != nullptr && block.frameCount > 0 && block.channels > 0;
+}
+
 }  // namespace
 
 AudioFrame Analyzer::analyze(const PcmBlock& block, int columns, float gain) {
     AudioFrame frame;
     frame.time = block.time;
-    frame.beat = false;
-    if (columns < 1) {
-        return frame;
-    }
     if (gain < 0.f) {
         gain = 0.f;
+    }
+    double elapsed = 0;
+    if (hasLastTime_ && block.time > lastTime_) {
+        // A long gap counts as the full hold, not more.
+        elapsed = std::min(block.time - lastTime_, kSilenceHoldSeconds);
+    } else if (block.sampleRate > 0 && block.frameCount > 0) {
+        elapsed = static_cast<double>(block.frameCount) / block.sampleRate;
+    }
+    lastTime_ = block.time;
+    hasLastTime_ = true;
+
+    // Time between blocks, not block length, drives the beat history too.
+    const float bass = hasAudioBlock(block)
+        ? bassLevel(block.samples, block.frameCount, block.channels, block.sampleRate, gain)
+        : 0.f;
+    const BeatState beat = beat_.update(bass, elapsed);
+    frame.bass = beat.bass;
+    frame.beatMode = beat.beatMode;
+    frame.beatBrightness = beat.brightness;
+    frame.bigBeatRatio = beat.bigBeatRatio;
+    if (columns < 1) {
+        return frame;
     }
 
     std::vector<float> mono;
     std::vector<float> left;
     std::vector<float> right;
-    const bool hasAudio = block.samples != nullptr && block.frameCount > 0 && block.channels > 0;
+    const bool hasAudio = hasAudioBlock(block);
     if (hasAudio) {
         mono = channel(block, -1, gain);
         if (block.channels == 1) {
@@ -166,15 +188,6 @@ AudioFrame Analyzer::analyze(const PcmBlock& block, int columns, float gain) {
         rotateFrom(frame.right, rising);
     }
 
-    double elapsed = 0;
-    if (hasLastTime_ && block.time > lastTime_) {
-        // A long gap counts as the full hold, not more.
-        elapsed = std::min(block.time - lastTime_, kSilenceHoldSeconds);
-    } else if (block.sampleRate > 0 && block.frameCount > 0) {
-        elapsed = static_cast<double>(block.frameCount) / block.sampleRate;
-    }
-    lastTime_ = block.time;
-    hasLastTime_ = true;
     if (frame.level < kSilenceLevel) {
         silenceHeld_ += elapsed;
     } else {
