@@ -88,6 +88,9 @@ struct MapParameters {
     std::uint32_t noiseSeed = 1;
     // Mode 6's push centers. The original creates ten and uses five.
     std::array<VortexPush, 5> pushes{};
+    // Mode 5 only: whether the look has the nuclide effect. Without it the scale falls off
+    // with the square root of the radius.
+    bool nuclide = true;
 };
 
 struct SourcePoint {
@@ -109,7 +112,8 @@ MapParameters randomMapParameters(int mode, int width, int height, Random& rando
 // rotations by pixel parity; modes 6, 10, and 12 use custom motion vectors.
 //   1: scale1 constant.                 2: scale1 constant, above 1 (outward).
 //   3: 0.95 - dy*(480/H)*0.0005.        4: 0.9 + r640*0.0025*0.14 (sphere).
-//   5: f2 - f1*r640/200*1.7.            6: weighted pushes and swirls.
+//   5: f2 - f1*r640/200*1.7 with the nuclide, f2 - f1*sqrt(r640/200) without.
+//   6: weighted pushes and swirls.
 //   7: f1 - r640*f2 + jitter (fuzzy).   8: 0.85 + 0.1*sin(sqrt(r640)*f1) (ripples).
 //   9: f1 - r640*f2, dithered with scale2 (petals).
 //  10: x stretched from the center, y read from y*1.04 (scroll).

@@ -58,7 +58,7 @@ Build a modernized Geiss visualizer for Apple Silicon Macs. Preserve the recogni
 
 - Preserve the existing visualization algorithms and their visual intent in portable C++ where practical.
 - In the first version, Metal uploads the RGBA8 buffer and scales it. A GPU warp can be considered later if CPU cost calls for it.
-- Each tick warps the previous index buffer through the current map, darkens it, draws the waveform, and then expands the palette to RGBA8.
+- Each tick draws the look's effects into the previous index buffer, warps it through the current map, darkens it, draws the waveform, and then expands the palette to RGBA8.
 - The prototype palette is one 256-color hue cycle. Its phase turns with time. The top 15% of indices blends from the hue toward white, eased in, so a freshly drawn full-brightness line glows white and fades back into the hue within about 0.7 s at the original decay rate. Audio-linked palettes wait. That difference is noted beside the ported code.
 - Presentation follows the display. Simulation time is elapsed seconds. A large gap after sleep or wake is capped so the picture does not jump.
 - Simulation resolution is independent of the display. The longest side is capped at 960, and the aspect ratio follows the window.
@@ -88,7 +88,7 @@ The picture has all 25 of the original's map modes and all 6 of its waveforms. T
 
 Maps, from `GenerateChunkOfNewMap`. `dx` and `dy` are the pixel offset from the map center. Most modes compute a scale and read from the center plus that offset, rotated by the map's turn and multiplied by the scale. `r640` is the offset's length on a 640-wide frame, as the original's `rmult` made it, so a mode keeps its look at any simulation size. Modes 17 and up use `nx` and `ny`, the offset times `2 / width`.
 
-- 1: a constant scale of 0.985 − 0.12·u². 2: a constant scale of 1.00…1.02 (outward). 3: `0.95 − dy·(480/H)·0.0005`. 4: a sphere, `0.9 + r640·0.0025·0.14`. 5: super-perspective, `f2 − f1·r640/200·1.7`.
+- 1: a constant scale of 0.985 − 0.12·u². 2: a constant scale of 1.00…1.02 (outward). 3: `0.95 − dy·(480/H)·0.0005`. 4: a sphere, `0.9 + r640·0.0025·0.14`. 5: super-perspective, `f2 − f1·r640/200·1.7` with the nuclide effect, `f2 − f1·√(r640/200)` without.
 - 6: a vortex field. Five push centers each push, or swirl one way or the other, weighted by `1 / (d² + 0.1)`, normalized to 1.9 pixels with a small drift. Distances and the move use the 640-wide reference.
 - 7: fuzzy, `f1 − r640·f2` plus a fixed per-pixel jitter of 0…0.0495. 8: ripples, `0.85 + 0.1·sin(√r640·f1)`. 9: petals, `f1 − r640·f2` on even pixels and a constant `scale2` on odd pixels.
 - 10: a scroll. Rows read from `y·1.04`, and columns stretch from the center by `1.03 + 0.03·y/H`. 11: two rotations and scales dithered by pixel parity. 12: a sideways splitter. Columns read from `±√|dx|` near the centerline (on the 640 reference), and the picture fades faster (0.98 per frame).
@@ -102,7 +102,7 @@ Intentional differences:
 - Mode 7's jitter comes from a hash per pixel and map, not the original's shared random table.
 - Mode 14 leaves out a jitter of under 1/1024 in the height.
 - Mode 20 reads a negative root above the frame as zero.
-- Mode 5 always uses the `r·1.7` branch, which is the one the original normally ran.
+- Mode 5 falls off with `r·1.7` when its look has the nuclide effect and with `√r` when it does not. The original read the nuclide state of the previous look, because it built the next map while the current one played. Here it follows the new look.
 - Modes 7 and 9 stop their per-pixel scale at 0. On frames much taller than wide, `r640` reaches radii the 640×480 original never did, and `f1 − r640·f2` would turn negative and flip the corners through the center.
 
 Kept as in the original:
@@ -126,7 +126,35 @@ Picking follows the original:
 - The waveform is re-chosen while the pair is excluded: mode 6 with waveform 5, mode 12 with waveforms 4 or 6, mode 14 with waveforms 3 or 4, and modes 8, 23, or 24 with waveform 6.
 - Next and the timer always change the pair.
 
-The window opens on mode 25 and waveform 1. Another pair is chosen about every 20 seconds unless the visual is locked. Next chooses one immediately. Pause freezes the picture and that timer. The oscilloscope rock advances while the picture is moving, including while locked, and holds while paused. Chunked background generation waits.
+### Layered effects
+
+Seven of the original's overlays are ported from `Effects.h` and `main.cpp`, using the original's 8-bit drawing, because the simulation stores palette indices. They draw into the previous frame before the warp, as the original drew into `VS1`, so the map smears them into trails. Sizes and positions are for a 640-wide frame and scale with the width. Time is counted in reference frames at 30 fps, so speeds do not depend on the display's refresh rate.
+
+- **Chasers:** one or two points on two-cosine curves around the map center. Each frame they take 20 steps (at 640 wide), and each step lifts its pixel 40% of the way to the top. The steps sit on a fixed grid of time, so the path is the same at any frame rate.
+- **Bar:** a short line between two endpoints that wander near the center. Each frame it adds 16 to every pixel on it below 223. Between frames it adds its share.
+- **Dots:** a slow point leaves a trail of its last 20 positions at a value that cycles with time. Every dot drifts one pixel right each frame.
+- **Solar:** particles land within 35 pixels of the center, each with a 3×3 glow that is brighter near the center. A pixel at 207 or above takes none. The count swings with time and with the mode's strength (`solar_max`, from the original's 8-bit table). Wider frames get more particles, so the density stays the same. A new mode 1 look opens with a burst of 2000 particles half the time, whether or not Solar is on.
+- **Grid:** a dot every 1/30 of the width in both directions. It scrolls one pixel a frame, left or right, and its brightness pulses. It never darkens a pixel.
+- **Nuclide:** a ring of 3…7 soft discs, 34…41 pixels from the center. With sound, a jump in volume (above 1.1 times the original's narrow average, which takes 0.7 of each new frame) drops a ring whose disc size follows the jump. In silence a ring of random size appears about one frame in 12. In 4 looks out of 7 the nuclide replaces the waveform, except over mode 10, where the original set the waveform again afterwards.
+- **Shade bobs:** one bob wobbles a few pixels around the center. It takes four jittered steps a frame, each adding 2 to its pixel and 1 to the four beside it, up to 250.
+
+Each map also darkens its center every frame (`center_dwindle`), so the zoom does not burn a hot spot there: 0.99 for modes 3 and 5, 0.98 for 4, 13, 14, 16, and 20…23, 0.985 for 7 and 9, 0.96 for 8, and 0.915 for 12. Mode 12 darkens a three-pixel column, since it splits sideways from a vertical line. The others darken the center pixel and its four neighbors.
+
+Picking follows `CModeInfo` and `Clip_Num_Effects`:
+- Each mode gives each effect a weight out of 1000. The weights use the original's truecolor adjustment: nuclide × 1.3, chasers − 50, dots and bar + 220, shade + 150, each kept within 0…900, and grid + 8.
+- Each effect gets one roll. While sound is playing, every weight is multiplied by 0.7.
+- Without sound, effects are added until the mode's minimum is met. Then effects are dropped at random down to the mode's maximum. Most modes allow 1…2. Mode 2 allows up to 5, mode 11 up to 4, modes 17 and up 1…3, and modes 10, 11, 12, and 15 allow none.
+- Chasers come as one or two. A grid turns the bar off. The grid's direction is random.
+- Effects are part of the look. Lock holds them. Next and the 20-second timer pick a new set for the new map. Pause freezes them with the picture.
+
+Intentional differences:
+- The original's weight table had a ninth slot that no mode set. It defaulted to 111 and could take up a place without drawing anything. It is left out.
+- Where no effect left could come up, the original's minimum loop would hang. Here it stops.
+- The original drew the nuclide's colors and the chasers' per-channel tints only in truecolor. The index buffer keeps one value per pixel, so the palette colors them.
+- The original turned its dots and grid points into 2×2 blocks above about 1000 pixels wide. The simulation stops at 960, so they stay one pixel.
+- Spectral dots (weight 0 everywhere) and the commented-out edge, neutron, and crystal effects are not ported.
+
+The window opens on mode 25 and waveform 1, with its own effects. Another pair is chosen about every 20 seconds unless the visual is locked. Next chooses one immediately. Pause freezes the picture and that timer. The oscilloscope rock advances while the picture is moving, including while locked, and holds while paused. Chunked background generation waits.
 
 The index buffer and hue-cycle palette are unchanged. The window listens to the default output mix. Visual > Tone and Visual > Silence override that source. The tap keeps running during an override.
 
@@ -151,7 +179,7 @@ The index buffer and hue-cycle palette are unchanged. The window listens to the 
 
 ## Open questions
 
-- Which existing effects and configuration options, beyond the prototype slice, should be preserved, modernized, or left out?
+- Which existing configuration options, beyond the prototype slice, should be preserved, modernized, or left out?
 - Which OS error indicates that system-audio recording permission was denied?
 - Does a tap whose permission is revoked at runtime stop its callbacks, or keep delivering silence?
 - Later decisions: a GPU warp, size and quality settings, presets, multi-display, a menu-bar extra, the screensaver host, sandboxing, and a public name.
@@ -164,7 +192,7 @@ The Windows project has a substantial set of rendering behaviors and options. So
 
 - **Procedural evolving backgrounds/maps:** Geiss creates a new visual map in chunks while the current one is displayed, then transitions to the new map. This evolving, fluid look is central to the identity. Preserve the feedback warp and automatic change of maps. The first build generates each map completely when the visual changes. Preparing the next map in slices waits.
 - **Waveforms:** The project cycles through several waveform styles, including an X-Y oscilloscope mode. Wave shape and amplitude react to the audio. Preserve the recognizable waveform family and audio response. All six of the original's waveforms are ported.
-- **Layered effects:** The renderer has optional effects such as chasers, bars, dots, solar-like overlays, grids, nuclide patterns, and shading. Some are selected or varied as part of modes. Preserve the signature effects and their combinations after assessing each for visual quality and cost on modern displays. The prototype leaves these for a later slice.
+- **Layered effects:** The renderer has optional effects such as chasers, bars, dots, solar-like overlays, grids, nuclide patterns, and shading. Some are selected or varied as part of modes. Preserve the signature effects and their combinations after assessing each for visual quality and cost on modern displays. All seven of the original's live effects are ported, with its per-map weights. See [Layered effects](#layered-effects).
 - **Automatic variation:** Modes, waveforms, palettes, and effects can change over time. Preserve automatic variety. Pause, lock, and next visual are the first-version controls for that behavior.
 
 ### Existing configuration intent
@@ -191,7 +219,7 @@ The Windows project has a substantial set of rendering behaviors and options. So
 - Automatic variation: visuals evolve on their own. Pause freezes the picture. Lock holds the current map, waveform, and palette while audio motion continues. Next visual advances the look.
 - Initial controls: sensitivity, pause, lock, and next visual.
 - Pixels: portable C++ simulates 8-bit palette indices, then expands them to RGBA8. Metal uploads and scales that buffer.
-- Current picture: all 25 original map modes and all 6 waveforms, picked with the original's weights and excluded pairs. The window opens on mode 25 and waveform 1. Next and the 20-second timer pick a different pair. Lock holds that pair and the palette. Pause freezes the picture. One hue-cycle palette with a white-hot top. Each frame feeds back through the same warp. No new controls. Beats brighten the waveform and land look changes, from a bass-focused detector. The horizontal slide shift waits. Layered effects, chunked map generation, a GPU warp, and the screen saver host wait.
+- Current picture: all 25 original map modes and all 6 waveforms, picked with the original's weights and excluded pairs. The window opens on mode 25 and waveform 1. Next and the 20-second timer pick a different pair. Each look also picks one to a few of the original's seven layered effects, with its per-map weights. Lock holds the pair, its effects, and the palette. Pause freezes the picture. One hue-cycle palette with a white-hot top. Each frame feeds back through the same warp. No new controls. Beats brighten the waveform and land look changes, from a bass-focused detector. The horizontal slide shift waits. Chunked map generation, a GPU warp, and the screen saver host wait.
 - Launch: the visualizer opens immediately. Denied or failed capture keeps calm motion and shows an overlay that opens System Settings.
 
 ### Choices considered

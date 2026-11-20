@@ -35,6 +35,7 @@
 #pragma once
 
 #include "geiss/audio.hpp"
+#include "geiss/effects.hpp"
 #include "geiss/map.hpp"
 
 #include <cstdint>
@@ -78,7 +79,12 @@ public:
     int mapMode() const { return mapParameters_.mode; }
     const MapParameters& map() const { return mapParameters_; }
     int waveform() const { return waveform_; }
+    const EffectSet& effects() const { return effects_; }
     int width() const { return width_; }
+
+    // Replaces the current look's effects, and rebuilds the map when mode 5 depends on
+    // the nuclide. Each new look picks its own again.
+    void setEffects(const EffectSet& effects);
     int height() const { return height_; }
 
     // `dt` is seconds. Gaps longer than 0.1s count as 0.1s.
@@ -87,6 +93,7 @@ public:
 
 private:
     void pickLook();
+    void pickEffects();
     void rebuildMap();
     void expandPalette(const std::uint8_t* indices);
 
@@ -102,6 +109,10 @@ private:
     float phase_ = 0;
     MapParameters mapParameters_{};
     Random random_;
+    EffectSet effects_{};
+    EffectLayer effectLayer_;
+    // Whether the latest audio had sound. Effects for a new look are picked with it.
+    bool soundActive_ = false;
     std::vector<SourcePoint> map_;
     std::vector<std::uint8_t> front_;
     std::vector<std::uint8_t> back_;

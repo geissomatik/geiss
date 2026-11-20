@@ -328,8 +328,11 @@ Look randomLook(Random& random) {
     return look;
 }
 
-Engine::Engine(std::uint32_t seed) {
+// The effect layer draws its particles from its own generator, so the frame rate does not
+// change which looks come up.
+Engine::Engine(std::uint32_t seed) : effectLayer_(seed ^ 0x5BD1E995u) {
     random_.state = seed == 0 ? 1u : seed;
+    pickEffects();
     resize(960, 540);
 }
 
@@ -379,6 +382,25 @@ void Engine::pickLook() {
     }
     mapParameters_ = randomMapParameters(picked.mode, width_, height_, random_);
     waveform_ = picked.waveform;
+    pickEffects();
+}
+
+void Engine::pickEffects() {
+    effects_ = randomEffects(mapParameters_.mode, soundActive_, random_);
+    mapParameters_.nuclide = effects_.has(Effect::Nuclide);
+    effectLayer_.startLook(effects_);
+}
+
+void Engine::setEffects(const EffectSet& effects) {
+    effects_ = effects;
+    effectLayer_.startLook(effects_);
+    const bool nuclide = effects_.has(Effect::Nuclide);
+    if (nuclide != mapParameters_.nuclide) {
+        mapParameters_.nuclide = nuclide;
+        if (mapParameters_.mode == 5) {
+            rebuildMap();
+        }
+    }
 }
 
 void Engine::nextVisual() {
@@ -438,6 +460,7 @@ FrameView Engine::tick(double dt, const AudioFrame& audio) {
         dt = kMaxDt;
     }
 
+    soundActive_ = !audio.silent && !audio.samples.empty();
     if (!locked_) {
         phase_ += static_cast<float>(dt) / kHuePeriod;
         phase_ -= std::floor(phase_);
@@ -455,9 +478,15 @@ FrameView Engine::tick(double dt, const AudioFrame& audio) {
     const float perReferenceFrame =
         static_cast<float>(weightNumerator(width_, height_)) / 256.f * mapParameters_.decay;
     const float decay = static_cast<float>(std::pow(static_cast<double>(perReferenceFrame), dt * kReferenceFps));
+    // The effects draw into the previous frame before the warp, as the original drew into VS1.
+    effectLayer_.draw(front_.data(), width_, height_, effects_, mapParameters_.mode,
+                      mapParameters_.centerXNorm * static_cast<float>(width_),
+                      mapParameters_.centerYNorm * static_cast<float>(height_), dt * kReferenceFps, audio);
     warpIndices(front_.data(), back_.data(), width_, height_, map_.data(), step, decay);
-    drawWaveform(back_.data(), width_, height_, audio, waveform_, mapParameters_.mode, mapParameters_.centerXNorm,
-                 mapParameters_.centerYNorm, static_cast<float>(motionTime_));
+    if (!effects_.hideWaveform) {
+        drawWaveform(back_.data(), width_, height_, audio, waveform_, mapParameters_.mode, mapParameters_.centerXNorm,
+                     mapParameters_.centerYNorm, static_cast<float>(motionTime_));
+    }
     expandPalette(back_.data());
     front_.swap(back_);
     return view;

@@ -203,8 +203,10 @@ float lowModeScale(const Offset& offset, int height, int x, int y, const MapPara
         case 4:
             return 0.9f + r * 0.0025f * 0.14f;
         case 5:
-            // The original took sqrt(r) only while the nuclide effect was unavailable (-1);
-            // otherwise it used r * 1.7, which is the branch it normally ran.
+            // The nuclide effect makes the fall-off steeper.
+            if (!map.nuclide) {
+                return map.f2 - map.f1 * std::sqrt(r / 200.f);
+            }
             return map.f2 - map.f1 * (r / 200.f * 1.7f);
         case 7:
             // Tall frames reach radii the 640x480 original never did, where f1 - r*f2
