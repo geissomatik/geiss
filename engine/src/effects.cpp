@@ -103,6 +103,8 @@ void addBelow(std::uint8_t* indices, int width, int height, int x, int y, int am
     }
 }
 
+bool hasSound(const AudioFrame& audio) { return !audio.silent && !audio.samples.empty(); }
+
 }  // namespace
 
 int EffectSet::count() const {
@@ -236,6 +238,13 @@ void EffectLayer::draw(std::uint8_t* indices, int width, int height, const Effec
         narrowVolume_ = narrowVolume_ * 0.3f + audio.volume * 0.7f;
     }
 
+    // Silence keeps the picture calm: no effect draws until sound returns, and a look that
+    // opens in silence loses its solar burst. The center still darkens, as part of the map.
+    if (!hasSound(audio)) {
+        burstPending_ = false;
+        diminishCenter(canvas, mode, info.centerDwindle, steps);
+        return;
+    }
     if (burstPending_) {
         burstPending_ = false;
         // Drop_Solar_Particles(500), times 4 in 8-bit color.
@@ -449,18 +458,11 @@ void EffectLayer::grid(const Canvas& canvas, int direction) {
     }
 }
 
-// Nuclide. With sound, a jump in volume (above 1.1 times avg_vol_narrow) drops a ring of
-// discs whose size follows the jump. In silence, a ring of random size appears about one
-// frame in 12.
+// Nuclide: a jump in volume (above 1.1 times avg_vol_narrow) drops a ring of discs whose
+// size follows the jump. The original's random rings in silence are left out, because
+// effects do not draw in silence.
 void EffectLayer::nuclide(const Canvas& canvas, int steps, const AudioFrame& audio) {
-    const bool sound = !audio.silent && !audio.samples.empty();
     for (int step = 0; step < steps; ++step) {
-        if (!sound) {
-            if (random_.below(12) == 0) {
-                nuclideRing(canvas, static_cast<float>(3 + random_.below(8)));
-            }
-            continue;
-        }
         if (audio.volume > narrowVolume_ * 1.1f) {
             const int radius = std::clamp(static_cast<int>(3.f + 40.f * (audio.volume / narrowVolume_ - 1.1f)), 1, 10);
             nuclideRing(canvas, static_cast<float>(radius));

@@ -94,7 +94,8 @@ public:
     void clearTrail();
 
     // `frames` is the elapsed time in reference frames (dt * 30). `centerX` and `centerY`
-    // are the map center in pixels, and `mode` is the map mode.
+    // are the map center in pixels, and `mode` is the map mode. While `audio` has no sound,
+    // only the map's center darkening draws.
     void draw(std::uint8_t* indices, int width, int height, const EffectSet& effects, int mode,
               float centerX, float centerY, double frames, const AudioFrame& audio);
 

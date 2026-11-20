@@ -951,51 +951,51 @@ void testEachEffectDraws() {
     constexpr float cx = width / 2.f;
     constexpr float cy = height / 2.f;
     constexpr float scale = width / 640.f;
-    const geiss::AudioFrame quiet = quietFrame();
+    const geiss::AudioFrame sound = beatFrame(false, 1.f, 0.f);
 
-    const Pixels shade = runEffects(only(Effect::Shade), 25, width, height, 30, 1, quiet);
+    const Pixels shade = runEffects(only(Effect::Shade), 25, width, height, 30, 1, sound);
     check(litCount(shade) > 0 && litReach(shade, width, cx, cy) < 9.6f * scale + 30.f, "shade bobs glow near the center");
     check(*std::max_element(shade.begin(), shade.end()) <= 251, "shade bobs stop adding at 250");
 
-    const Pixels chasers = runEffects(only(Effect::Chasers), 25, width, height, 30, 1, quiet);
+    const Pixels chasers = runEffects(only(Effect::Chasers), 25, width, height, 30, 1, sound);
     check(litCount(chasers) > 100, "chasers trace a path");
     check(litReach(chasers, width, cx, cy) <= (139.f + 109.f) * scale + 2.f, "chasers stay on their curves");
 
     geiss::EffectSet twoChasers = only(Effect::Chasers);
     twoChasers.chasers = 2;
-    check(litCount(runEffects(twoChasers, 25, width, height, 30, 1, quiet)) > litCount(chasers), "two chasers draw more");
+    check(litCount(runEffects(twoChasers, 25, width, height, 30, 1, sound)) > litCount(chasers), "two chasers draw more");
 
     // Chaser steps sit on a fixed grid of time, so the frame rate does not change the path.
-    check(runEffects(only(Effect::Chasers), 25, width, height, 30, 4, quiet) == chasers,
+    check(runEffects(only(Effect::Chasers), 25, width, height, 30, 4, sound) == chasers,
           "chasers draw the same path at 120 fps as at 30 fps");
 
-    const Pixels bar = runEffects(only(Effect::Bar), 25, width, height, 1, 1, quiet);
+    const Pixels bar = runEffects(only(Effect::Bar), 25, width, height, 1, 1, sound);
     bool sixteens = litCount(bar) > 0;
     for (const std::uint8_t p : bar) {
         sixteens = sixteens && p % 16 == 0;
     }
     check(sixteens, "one frame of the bar adds 16 per point");
     check(litReach(bar, width, cx, cy) <= 31.f * scale * 1.5f + 2.f, "the bar stays near the center");
-    const Pixels slowBar = runEffects(only(Effect::Bar), 25, width, height, 60, 1, quiet);
+    const Pixels slowBar = runEffects(only(Effect::Bar), 25, width, height, 60, 1, sound);
     check(*std::max_element(slowBar.begin(), slowBar.end()) <= 238, "the bar stops adding at 223");
-    const Pixels fastBar = runEffects(only(Effect::Bar), 25, width, height, 1, 4, quiet);
+    const Pixels fastBar = runEffects(only(Effect::Bar), 25, width, height, 1, 4, sound);
     check(*std::max_element(fastBar.begin(), fastBar.end()) >= 12, "at 120 fps the bar adds its share each tick");
 
-    const Pixels dots = runEffects(only(Effect::Dots), 25, width, height, 1, 1, quiet);
+    const Pixels dots = runEffects(only(Effect::Dots), 25, width, height, 1, 1, sound);
     check(litCount(dots) == 1, "the first frame of dots draws one dot");
-    check(litCount(runEffects(only(Effect::Dots), 25, width, height, 1, 4, quiet)) == 1,
+    check(litCount(runEffects(only(Effect::Dots), 25, width, height, 1, 4, sound)) == 1,
           "dots move once per reference frame at 120 fps");
-    check(litCount(runEffects(only(Effect::Dots), 25, width, height, 5, 1, quiet)) > 1, "dots leave a trail");
+    check(litCount(runEffects(only(Effect::Dots), 25, width, height, 5, 1, sound)) > 1, "dots leave a trail");
 
-    const Pixels solar = runEffects(only(Effect::Solar), 1, width, height, 10, 1, quiet);
+    const Pixels solar = runEffects(only(Effect::Solar), 1, width, height, 10, 1, sound);
     check(litCount(solar) > 100, "solar particles land");
     check(litReach(solar, width, cx, cy) < 36.f * scale + 2.f, "solar particles land within 35 pixels at 640 wide");
 
     geiss::EffectSet burst;
     burst.solarBurst = true;
-    check(litCount(runEffects(burst, 1, width, height, 1, 1, quiet)) > 100, "map 1 can open with a solar burst");
+    check(litCount(runEffects(burst, 1, width, height, 1, 1, sound)) > 100, "map 1 can open with a solar burst");
 
-    const Pixels grid = runEffects(only(Effect::Grid), 25, width, height, 1, 1, quiet);
+    const Pixels grid = runEffects(only(Effect::Grid), 25, width, height, 1, 1, sound);
     const int spacing = width / 30;
     bool onRows = litCount(grid) > 0;
     for (std::size_t i = 0; i < grid.size(); ++i) {
@@ -1013,11 +1013,11 @@ void testEachEffectDraws() {
     layer.startLook(dotsOnly);
     Pixels large(static_cast<std::size_t>(width) * height, 0);
     for (int i = 0; i < 10; ++i) {
-        layer.draw(large.data(), width, height, dotsOnly, 25, cx, cy, 1.0, quiet);
+        layer.draw(large.data(), width, height, dotsOnly, 25, cx, cy, 1.0, sound);
     }
     layer.clearTrail();
     Pixels small(static_cast<std::size_t>(width / 2) * (height / 2), 0);
-    layer.draw(small.data(), width / 2, height / 2, dotsOnly, 25, cx / 2.f, cy / 2.f, 1.0, quiet);
+    layer.draw(small.data(), width / 2, height / 2, dotsOnly, 25, cx / 2.f, cy / 2.f, 1.0, sound);
     check(litCount(small) == 1, "a cleared trail draws no dots from the old size");
 }
 
@@ -1046,8 +1046,21 @@ void testNuclide() {
     const float reach = litReach(pixels, width, width / 2.f, height / 2.f);
     check(reach > 30.f * 0.5f && reach < (42.f + 11.f) * 0.5f + 2.f, "the discs sit on a ring around the center");
 
-    const Pixels silent = runEffects(only(Effect::Nuclide), 25, width, height, 120, 1, quietFrame());
-    check(litCount(silent) > 0, "in silence the nuclide still appears now and then");
+    // Silence keeps the picture calm: no effect draws, and a burst due in silence is dropped.
+    geiss::EffectSet every;
+    every.on.fill(true);
+    every.chasers = 2;
+    every.solarBurst = true;
+    check(litCount(runEffects(every, 1, width, height, 120, 1, quietFrame())) == 0, "no effect draws in silence");
+
+    geiss::EffectLayer late(5);
+    geiss::EffectSet burstOnly;
+    burstOnly.solarBurst = true;
+    late.startLook(burstOnly);
+    std::fill(pixels.begin(), pixels.end(), 0);
+    late.draw(pixels.data(), width, height, burstOnly, 1, width / 2.f, height / 2.f, 1.0, quietFrame());
+    late.draw(pixels.data(), width, height, burstOnly, 1, width / 2.f, height / 2.f, 1.0, steady);
+    check(litCount(pixels) == 0, "a look that opens in silence loses its solar burst");
 }
 
 void testCenterDwindle() {

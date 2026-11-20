@@ -128,14 +128,14 @@ Picking follows the original:
 
 ### Layered effects
 
-Seven of the original's overlays are ported from `Effects.h` and `main.cpp`, using the original's 8-bit drawing, because the simulation stores palette indices. They draw into the previous frame before the warp, as the original drew into `VS1`, so the map smears them into trails. Sizes and positions are for a 640-wide frame and scale with the width. Time is counted in reference frames at 30 fps, so speeds do not depend on the display's refresh rate.
+Seven of the original's overlays are ported from `Effects.h` and `main.cpp`, using the original's 8-bit drawing, because the simulation stores palette indices. They draw into the previous frame before the warp, as the original drew into `VS1`, so the map smears them into trails. Sizes and positions are for a 640-wide frame and scale with the width. Time is counted in reference frames at 30 fps, so speeds do not depend on the display's refresh rate. Effects draw only while there is sound. In silence, and while capture is denied or failed, they rest until sound returns, so the picture stays calm.
 
 - **Chasers:** one or two points on two-cosine curves around the map center. Each frame they take 20 steps (at 640 wide), and each step lifts its pixel 40% of the way to the top. The steps sit on a fixed grid of time, so the path is the same at any frame rate.
 - **Bar:** a short line between two endpoints that wander near the center. Each frame it adds 16 to every pixel on it below 223. Between frames it adds its share.
 - **Dots:** a slow point leaves a trail of its last 20 positions at a value that cycles with time. Every dot drifts one pixel right each frame.
-- **Solar:** particles land within 35 pixels of the center, each with a 3×3 glow that is brighter near the center. A pixel at 207 or above takes none. The count swings with time and with the mode's strength (`solar_max`, from the original's 8-bit table). Wider frames get more particles, so the density stays the same. A new mode 1 look opens with a burst of 2000 particles half the time, whether or not Solar is on.
+- **Solar:** particles land within 35 pixels of the center, each with a 3×3 glow that is brighter near the center. A pixel at 207 or above takes none. The count swings with time and with the mode's strength (`solar_max`, from the original's 8-bit table). Wider frames get more particles, so the density stays the same. A new mode 1 look opens with a burst of 2000 particles half the time, whether or not Solar is on. A look that opens in silence loses its burst.
 - **Grid:** a dot every 1/30 of the width in both directions. It scrolls one pixel a frame, left or right, and its brightness pulses. It never darkens a pixel.
-- **Nuclide:** a ring of 3…7 soft discs, 34…41 pixels from the center. With sound, a jump in volume (above 1.1 times the original's narrow average, which takes 0.7 of each new frame) drops a ring whose disc size follows the jump. In silence a ring of random size appears about one frame in 12. In 4 looks out of 7 the nuclide replaces the waveform, except over mode 10, where the original set the waveform again afterwards.
+- **Nuclide:** a ring of 3…7 soft discs, 34…41 pixels from the center. With sound, a jump in volume (above 1.1 times the original's narrow average, which takes 0.7 of each new frame) drops a ring whose disc size follows the jump. In 4 looks out of 7 the nuclide replaces the waveform, except over mode 10, where the original set the waveform again afterwards.
 - **Shade bobs:** one bob wobbles a few pixels around the center. It takes four jittered steps a frame, each adding 2 to its pixel and 1 to the four beside it, up to 250.
 
 Each map also darkens its center every frame (`center_dwindle`), so the zoom does not burn a hot spot there: 0.99 for modes 3 and 5, 0.98 for 4, 13, 14, 16, and 20…23, 0.985 for 7 and 9, 0.96 for 8, and 0.915 for 12. Mode 12 darkens a three-pixel column, since it splits sideways from a vertical line. The others darken the center pixel and its four neighbors.
@@ -152,6 +152,7 @@ Intentional differences:
 - Where no effect left could come up, the original's minimum loop would hang. Here it stops.
 - The original drew the nuclide's colors and the chasers' per-channel tints only in truecolor. The index buffer keeps one value per pixel, so the palette colors them.
 - The original turned its dots and grid points into 2×2 blocks above about 1000 pixels wide. The simulation stops at 960, so they stay one pixel.
+- Effects rest in silence. The original kept drawing them, and the nuclide dropped a random ring about one frame in 12. The user chose a calm picture in silence and when capture is denied, so those rings are left out. The center darkening is part of the map and continues.
 - Spectral dots (weight 0 everywhere) and the commented-out edge, neutron, and crystal effects are not ported.
 
 The window opens on mode 25 and waveform 1, with its own effects. Another pair is chosen about every 20 seconds unless the visual is locked. Next chooses one immediately. Pause freezes the picture and that timer. The oscilloscope rock advances while the picture is moving, including while locked, and holds while paused. Chunked background generation waits.
@@ -182,7 +183,6 @@ The index buffer and hue-cycle palette are unchanged. The window listens to the 
 - Which existing configuration options, beyond the prototype slice, should be preserved, modernized, or left out?
 - Which OS error indicates that system-audio recording permission was denied?
 - Does a tap whose permission is revoked at runtime stop its callbacks, or keep delivering silence?
-- Should silence and denied capture still draw layered effects? As ported, a look without sound keeps at least its mode's minimum effects, and the nuclide drops a random ring about one frame in 12, as the original did. That is busier than the calm visual the launch and permission states call for. Options: keep the original's behavior, thin the effects in silence, or drop them until sound returns.
 - Later decisions: a GPU warp, size and quality settings, presets, multi-display, a menu-bar extra, the screensaver host, sandboxing, and a public name.
 
 ## Existing experience inventory (discussion draft)
