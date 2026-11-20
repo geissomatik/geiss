@@ -26,7 +26,7 @@ The app opens straight into a window on the main display. The window starts at 1
 
 The picture keeps the same warp and adds a few Geiss looks. The maps are mode 17 (a horizontal tunnel), mode 19 (a vortex), mode 24 (a fast swirl), and mode 25 (a smooth zoom). The waveforms are 1 (one smoothed line), 2 (two smoothed lines), and 6 (the X-Y oscilloscope). The window opens on mode 25 and waveform 1. Next, and the 20-second timer, pick a different pair. Mode 24 is not paired with waveform 6. Lock holds that pair. Pause freezes the picture and that timer. The simulation stores 8-bit palette indices, expands one hue-cycle palette to RGBA8, and Metal uploads that buffer. The longest simulation side is 960. Each frame warps the previous frame through the map and darkens it.
 
-The app taps the default output mix. Playback continues. The audio callback only copies samples. The C++ analyzer turns those samples into one frame, and the engine reads that frame on the main thread. The tap is recreated when the default output device changes, stopped on sleep, and started again on wake. Visual > Tone and Visual > Silence override the live mix while the tap keeps running. A failed tap keeps a calm picture and shows an overlay that opens System Settings. The OSStatus for a denied tap has not been observed yet, so leave that line in the spec until a real code appears.
+The app taps the default output mix. Playback continues. The audio callback only copies the 32-bit float tap stream into a preallocated ring. It never waits on a lock; it drops a block if the reader is copying. A tap with no callbacks for three seconds is restarted. The C++ analyzer turns those samples into one frame, and the engine reads that frame on the main thread. The tap is recreated when the default output device changes, stopped on sleep, and started again on wake. Visual > Tone and Visual > Silence override the live mix while the tap keeps running. A failed tap keeps a calm picture and shows an overlay that opens System Settings. The OSStatus for a denied tap has not been observed yet, so leave that line in the spec until a real code appears. Whether a revoked tap stops its callbacks or delivers silence is also still open.
 
 The window controls are sensitivity (persisted, default 1.0), pause, lock, and next visual. The bar hides after a few seconds. Space pauses, L locks, and N or the right arrow advances the look.
 
@@ -45,6 +45,8 @@ Still ahead: beat response is the next slice. The remaining map modes and wavefo
 ## Working approach
 
 - During brainstorming and specification work, do not implement application code unless the user explicitly asks to begin implementation.
-- Keep changes focused on the requested task. Do not add tests or run test suites unless asked.
+- Keep changes focused on the requested task. Do not add tests unless asked.
+- Before every commit, build and run the engine tests (see [`macos/README.md`](macos/README.md)) and commit only when they pass.
+- After changing the app, build it and launch it so the user can test it by hand.
 - Keep `engine/`, the Objective-C++ bridge, and `macos/` clean under the pre-commit hooks (`pre-commit run --all-files`): clang-tidy per [`.clang-tidy`](.clang-tidy) and SwiftLint per [`.swiftlint.yml`](.swiftlint.yml). Fix findings rather than adding `NOLINT`, unless the check is wrong for that line, and say why in the comment. The legacy Windows sources are not linted.
 - Explain important design assumptions and unresolved product questions in the spec rather than silently deciding them.

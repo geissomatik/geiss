@@ -40,7 +40,14 @@ final class MetalPresenter: NSObject, MTKViewDelegate {
     let device: MTLDevice
     private let queue: MTLCommandQueue
     private let pipeline: MTLRenderPipelineState
+    /// Uploads rotate through these so the CPU never writes a texture the GPU is still reading.
+    private static let textureCount = 3
+    private var textures: [MTLTexture] = []
+    private var textureIndex = 0
     private var texture: MTLTexture?
+    private let inFlight = DispatchSemaphore(value: textureCount)
+    /// True between an upload's wait and the draw that releases that slot.
+    private var slotHeld = false
     private weak var view: MTKView?
 
     override init() {
@@ -76,7 +83,9 @@ final class MetalPresenter: NSObject, MTKViewDelegate {
 
     func upload(pixels: UnsafePointer<UInt8>, width: Int, height: Int) {
         guard width > 0, height > 0 else { return }
-        if texture?.width != width || texture?.height != height {
+        inFlight.wait()
+        slotHeld = true
+        if textures.first?.width != width || textures.first?.height != height {
             let descriptor = MTLTextureDescriptor.texture2DDescriptor(
                 pixelFormat: .rgba8Unorm,
                 width: width,
@@ -84,15 +93,34 @@ final class MetalPresenter: NSObject, MTKViewDelegate {
                 mipmapped: false
             )
             descriptor.usage = [.shaderRead]
-            texture = device.makeTexture(descriptor: descriptor)
+            textures = (0..<Self.textureCount).compactMap { _ in device.makeTexture(descriptor: descriptor) }
+            textureIndex = 0
         }
-        texture?.replace(
+        guard !textures.isEmpty else {
+            releaseSlot()
+            return
+        }
+        let next = textures[textureIndex]
+        textureIndex = (textureIndex + 1) % textures.count
+        next.replace(
             region: MTLRegionMake2D(0, 0, width, height),
             mipmapLevel: 0,
             withBytes: pixels,
             bytesPerRow: width * 4
         )
-        view?.draw()
+        texture = next
+        if let view {
+            view.draw()
+        }
+        // No view, or a draw that returned before committing, leaves the slot free.
+        releaseSlot()
+    }
+
+    private func releaseSlot() {
+        if slotHeld {
+            slotHeld = false
+            inFlight.signal()
+        }
     }
 
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
@@ -110,6 +138,14 @@ final class MetalPresenter: NSObject, MTKViewDelegate {
         encoder.setFragmentTexture(texture, index: 0)
         encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
         encoder.endEncoding()
+        if slotHeld {
+            // The GPU releases this upload's slot once it has finished reading the texture.
+            slotHeld = false
+            let semaphore = inFlight
+            buffer.addCompletedHandler { _ in
+                semaphore.signal()
+            }
+        }
         buffer.present(drawable)
         buffer.commit()
     }

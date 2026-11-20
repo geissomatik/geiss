@@ -84,19 +84,8 @@ struct VisualizerView: View {
             }
         }
         .focusable()
-        .onKeyPress(.space) {
-            model.togglePaused()
-            return .handled
-        }
+        // Space, L, and N are menu shortcuts in the Visual menu. The right arrow is extra.
         .onKeyPress(.rightArrow) {
-            model.nextVisual()
-            return .handled
-        }
-        .onKeyPress(characters: CharacterSet(charactersIn: "lL")) { _ in
-            model.toggleLocked()
-            return .handled
-        }
-        .onKeyPress(characters: CharacterSet(charactersIn: "nN")) { _ in
             model.nextVisual()
             return .handled
         }

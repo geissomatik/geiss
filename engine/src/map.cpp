@@ -74,20 +74,33 @@ Plane planeAt(int x, int y, int width, int height, float centerXNorm, float cent
     return plane;
 }
 
-SourcePoint place(const Plane& plane, float scale, float turn) {
-    const float cosine = std::cos(turn);
-    const float sine = std::sin(turn);
-    const float rx = plane.nx * cosine - plane.ny * sine;
-    const float ry = plane.nx * sine + plane.ny * cosine;
+// cos and sin of the map's turn. The turn is fixed for a whole map, so buildMap computes it once.
+struct Rotation {
+    float cosine = 1;
+    float sine = 0;
+};
+
+// Mode 24's pixel loop replaces the shared turn with 0.05.
+float effectiveTurn(const MapParameters& map) {
+    return map.mode == 24 ? 0.05f : map.turn;
+}
+
+Rotation rotationFor(const MapParameters& map) {
+    const float turn = effectiveTurn(map);
+    return Rotation{std::cos(turn), std::sin(turn)};
+}
+
+SourcePoint place(const Plane& plane, float scale, const Rotation& rotation) {
+    const float rx = plane.nx * rotation.cosine - plane.ny * rotation.sine;
+    const float ry = plane.nx * rotation.sine + plane.ny * rotation.cosine;
     SourcePoint point;
     point.x = rx * scale * plane.halfWidth + plane.centerX;
     point.y = ry * scale * plane.halfWidth + plane.centerY;
     return point;
 }
 
-}  // namespace
-
-SourcePoint mode25Source(int x, int y, int width, int height, const MapParameters& map) {
+SourcePoint zoomSource(int x, int y, int width, int height, const MapParameters& map,
+                       const Rotation& rotation) {
     SourcePoint point;
     point.x = static_cast<float>(x);
     point.y = static_cast<float>(y);
@@ -98,12 +111,13 @@ SourcePoint mode25Source(int x, int y, int width, int height, const MapParameter
     const Plane plane = planeAt(x, y, width, height, map.centerXNorm, map.centerYNorm);
     const float radius = std::sqrt(plane.nx * plane.nx + plane.ny * plane.ny);
     const float zoom = std::max(map.zoom, 0.001f);
-    return place(plane, zoom / (zoom + radius), map.turn);
+    return place(plane, zoom / (zoom + radius), rotation);
 }
 
-SourcePoint mapSource(int x, int y, int width, int height, const MapParameters& map) {
-    if (map.mode == 25) {
-        return mode25Source(x, y, width, height, map);
+SourcePoint sourceAt(int x, int y, int width, int height, const MapParameters& map,
+                     const Rotation& rotation) {
+    if (map.mode != 17 && map.mode != 19 && map.mode != 24) {
+        return zoomSource(x, y, width, height, map, rotation);
     }
     SourcePoint point;
     point.x = static_cast<float>(x);
@@ -113,8 +127,7 @@ SourcePoint mapSource(int x, int y, int width, int height, const MapParameters& 
     }
 
     const Plane plane = planeAt(x, y, width, height, map.centerXNorm, map.centerYNorm);
-    float scale = 1.f;
-    float turn = map.turn;
+    float scale = 0.96f;
     if (map.mode == 17) {
         // Horizontal tunnel. The source comment's ranges are 0.96...0.98 and 0.30...0.45.
         // The running formula uses these two constants.
@@ -122,33 +135,40 @@ SourcePoint mapSource(int x, int y, int width, int height, const MapParameters& 
     } else if (map.mode == 19) {
         // Vortex. The source comment's ranges are 1.03...1.05 and 0.15...0.30.
         scale = 1.04f - 0.25f * std::sqrt(plane.nx * plane.nx + plane.ny * plane.ny);
-    } else if (map.mode == 24) {
-        // Fast swirl. The pixel loop writes over the shared turn. The comment's
-        // ranges are 0.95...0.97 and 0.04...0.06. The running formula uses these constants.
-        scale = 0.96f;
-        turn = 0.05f;
-    } else {
-        return mode25Source(x, y, width, height, map);
     }
-    return place(plane, scale, turn);
+    // Mode 24 is the fast swirl: scale 0.96 and turn 0.05. The comment's ranges are
+    // 0.95...0.97 and 0.04...0.06. The running formula uses these constants.
+    return place(plane, scale, rotation);
+}
+
+template <typename Source>
+void fillMap(std::vector<SourcePoint>& out, int width, int height, Source source) {
+    out.resize(static_cast<std::size_t>(width) * static_cast<std::size_t>(height));
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            out[static_cast<std::size_t>(y) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x)] = source(x, y);
+        }
+    }
+}
+
+}  // namespace
+
+SourcePoint mode25Source(int x, int y, int width, int height, const MapParameters& map) {
+    return zoomSource(x, y, width, height, map, rotationFor(map));
+}
+
+SourcePoint mapSource(int x, int y, int width, int height, const MapParameters& map) {
+    return sourceAt(x, y, width, height, map, rotationFor(map));
 }
 
 void buildMode25Map(std::vector<SourcePoint>& out, int width, int height, const MapParameters& map) {
-    out.resize(static_cast<std::size_t>(width) * static_cast<std::size_t>(height));
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            out[static_cast<std::size_t>(y) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x)] = mode25Source(x, y, width, height, map);
-        }
-    }
+    const Rotation rotation = rotationFor(map);
+    fillMap(out, width, height, [&](int x, int y) { return zoomSource(x, y, width, height, map, rotation); });
 }
 
 void buildMap(std::vector<SourcePoint>& out, int width, int height, const MapParameters& map) {
-    out.resize(static_cast<std::size_t>(width) * static_cast<std::size_t>(height));
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            out[static_cast<std::size_t>(y) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x)] = mapSource(x, y, width, height, map);
-        }
-    }
+    const Rotation rotation = rotationFor(map);
+    fillMap(out, width, height, [&](int x, int y) { return sourceAt(x, y, width, height, map, rotation); });
 }
 
 void warpIndices(const std::uint8_t* src, std::uint8_t* dst, int width, int height,
@@ -202,7 +222,7 @@ int weightNumerator(int width, int height) {
     } else if (area <= 1280L * 960L) {
         factor = 254;
     }
-    return 256 * factor / 256;
+    return factor;
 }
 
 }  // namespace geiss

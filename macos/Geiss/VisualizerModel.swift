@@ -71,6 +71,7 @@ final class VisualizerModel: ObservableObject {
     private var simWidth = 0
     private var simHeight = 0
     private var silenceBuffer: [Float] = []
+    private var captureBuffer: [Float] = []
 
     private static let sensitivityKey = "sensitivity"
 
@@ -92,8 +93,9 @@ final class VisualizerModel: ObservableObject {
         let stored = UserDefaults.standard.object(forKey: Self.sensitivityKey) as? Double ?? 1
         sensitivity = min(4, max(0.25, stored))
         bridge.setSensitivity(Float(sensitivity))
+        // The tap delivers statuses on the main queue, in order.
         tap.onStatus = { [weak self] status in
-            Task { @MainActor in
+            MainActor.assumeIsolated {
                 self?.capture = status
             }
         }
@@ -177,10 +179,10 @@ final class VisualizerModel: ObservableObject {
         } else {
             running = false
         }
-        if running, let snap = tap.latest(), snap.sequence != lastSequence {
+        if running, let snap = tap.latest(into: &captureBuffer), snap.sequence != lastSequence {
             lastSequence = snap.sequence
             lastCaptureDate = Date()
-            snap.samples.withUnsafeBufferPointer { buffer in
+            captureBuffer.withUnsafeBufferPointer { buffer in
                 bridge.ingestInterleaved(
                     buffer.baseAddress,
                     frameCount: Int32(snap.frames),

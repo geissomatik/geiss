@@ -166,12 +166,17 @@ AudioFrame Analyzer::analyze(const PcmBlock& block, int columns, float gain) {
         rotateFrom(frame.right, rising);
     }
 
-    double duration = 0;
-    if (block.sampleRate > 0 && block.frameCount > 0) {
-        duration = static_cast<double>(block.frameCount) / block.sampleRate;
+    double elapsed = 0;
+    if (hasLastTime_ && block.time > lastTime_) {
+        // A long gap counts as the full hold, not more.
+        elapsed = std::min(block.time - lastTime_, kSilenceHoldSeconds);
+    } else if (block.sampleRate > 0 && block.frameCount > 0) {
+        elapsed = static_cast<double>(block.frameCount) / block.sampleRate;
     }
+    lastTime_ = block.time;
+    hasLastTime_ = true;
     if (frame.level < kSilenceLevel) {
-        silenceHeld_ += duration;
+        silenceHeld_ += elapsed;
     } else {
         silenceHeld_ = 0;
     }

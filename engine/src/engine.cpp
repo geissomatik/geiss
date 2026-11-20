@@ -237,20 +237,28 @@ void Engine::resize(int width, int height) {
     if (width == width_ && height == height_) {
         return;
     }
+    const int oldWidth = width_;
+    const int oldHeight = height_;
     width_ = width;
     height_ = height;
     const std::size_t count = static_cast<std::size_t>(width_) * static_cast<std::size_t>(height_);
-    front_.assign(count, 0);
+
+    // Carry the picture into the new size, nearest-neighbor, so a live resize does not go black.
+    back_.assign(count, 0);
+    if (oldWidth >= 2 && oldHeight >= 2 && !front_.empty()) {
+        for (int y = 0; y < height_; ++y) {
+            const int sy = y * oldHeight / height_;
+            for (int x = 0; x < width_; ++x) {
+                const int sx = x * oldWidth / width_;
+                back_[static_cast<std::size_t>(y) * static_cast<std::size_t>(width_) + static_cast<std::size_t>(x)] =
+                    front_[static_cast<std::size_t>(sy) * static_cast<std::size_t>(oldWidth) + static_cast<std::size_t>(sx)];
+            }
+        }
+    }
+    front_.swap(back_);
     back_.assign(count, 0);
     rgba_.assign(count * 4, 0);
-    for (std::size_t i = 0; i < count; ++i) {
-        rgba_[i * 4 + 3] = 255;
-    }
-    if (mapParameters_.zoom <= 0.f) {
-        mapParameters_.zoom = 3.f;
-        mapParameters_.centerXNorm = 0.5f;
-        mapParameters_.centerYNorm = 0.5f;
-    }
+    expandPalette(front_.data());
     rebuildMap();
 }
 
@@ -286,11 +294,6 @@ void Engine::nextVisual() {
 }
 
 void Engine::rebuildMap() {
-    if (mapParameters_.mode == 25 && mapParameters_.zoom <= 0.f) {
-        mapParameters_.zoom = 3.f;
-        mapParameters_.centerXNorm = 0.5f;
-        mapParameters_.centerYNorm = 0.5f;
-    }
     buildMap(map_, width_, height_, mapParameters_);
 }
 
